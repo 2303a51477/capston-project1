@@ -1,0 +1,392 @@
+{% extends 'base.html' %}
+
+{% block title %}AI Performance Prediction | AI-Based Student Performance Prediction System{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+  <!-- Page Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+      <h3 class="fw-bold text-dark mb-1">AI-Based Performance Prediction</h3>
+      <p class="text-muted small mb-0">Forecast your final examination score using our trained Scikit-learn Random Forest Regression model.</p>
+    </div>
+    <div>
+      <button type="button" class="btn btn-outline-primary" id="btnAutofillAcademicData"
+              data-att="{{ aggregates['overall_attendance_pct'] }}"
+              data-internal="{{ aggregates['avg_internal'] }}">
+        <i class="bi bi-magic me-1"></i> Autofill from My Records
+      </button>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    
+    <!-- Input Form -->
+    <div class="col-lg-6">
+      <div class="custom-card p-4 h-100">
+        <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+          <div class="metric-icon-box metric-icon-blue" style="width: 38px; height: 38px; font-size: 1.1rem;">
+            <i class="bi bi-sliders"></i>
+          </div>
+          <div>
+            <h5 class="fw-bold text-dark mb-0">Enter Your Academic Metrics</h5>
+            <small class="text-muted">Provide your actual or target parameters for forecasting</small>
+          </div>
+        </div>
+
+        <form action="{{ url_for('predict') }}" method="POST">
+          
+          <!-- Subject Selector -->
+          <div class="mb-3">
+            <label for="selectSubjectTarget" class="form-label fw-semibold small text-dark d-flex justify-content-between">
+              <span><i class="bi bi-book-half me-1 text-primary"></i> Target Subject for Prediction</span>
+              <span class="text-muted small">Subject-Wise or Overall</span>
+            </label>
+            <select class="form-select" id="selectSubjectTarget" name="subject_name">
+              <option value="Overall Examination" data-att="{{ aggregates['overall_attendance_pct'] }}" data-internal="{{ aggregates['avg_internal'] }}" data-assign="80.0" data-prev="72.0" selected>
+                🎯 Overall Semester Examination (Cumulative)
+              </option>
+              {% for s in subject_predictions %}
+                <option value="{{ s['name'] }}" data-att="{{ s['attendance_pct'] }}" data-internal="{{ s['internal_pct'] }}" data-assign="{{ s['assignment_pct'] }}" data-prev="{{ s['prev_exam'] }}">
+                  📘 {{ s['code'] }}: {{ s['name'] }} (Attendance: {{ s['attendance_pct'] }}%)
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <!-- 1. Attendance Percentage -->
+          <div class="mb-3">
+            <label for="inputAttendance" class="form-label fw-semibold small text-dark d-flex justify-content-between">
+              <span><i class="bi bi-calendar-check me-1 text-primary"></i> Attendance Percentage (%)</span>
+              <span class="text-muted">Min: 0% | Max: 100%</span>
+            </label>
+            <div class="input-group">
+              <input type="number" step="0.1" class="form-control" id="inputAttendance" name="attendance"
+                     placeholder="e.g. 78.5" min="0" max="100"
+                     value="{{ result['inputs']['attendance'] if result else aggregates['overall_attendance_pct'] }}" required>
+              <span class="input-group-text bg-light text-muted">%</span>
+            </div>
+          </div>
+
+          <!-- 2. Study Hours Per Day -->
+          <div class="mb-3">
+            <label for="inputStudyHours" class="form-label fw-semibold small text-dark d-flex justify-content-between">
+              <span><i class="bi bi-clock-history me-1 text-primary"></i> Daily Study Hours</span>
+              <span class="text-muted">Typical: 2.0 – 8.0 hrs</span>
+            </label>
+            <div class="input-group">
+              <input type="number" step="0.1" class="form-control" id="inputStudyHours" name="study_hours"
+                     placeholder="e.g. 4.0" min="0" max="24"
+                     value="{{ result['inputs']['study_hours'] if result else '4.0' }}" required>
+              <span class="input-group-text bg-light text-muted">hrs/day</span>
+            </div>
+          </div>
+
+          <!-- 3. Internal Assessment Marks -->
+          <div class="mb-3">
+            <label for="inputInternalMarks" class="form-label fw-semibold small text-dark d-flex justify-content-between">
+              <span><i class="bi bi-journal-text me-1 text-primary"></i> Internal Assessment Marks (out of 100)</span>
+              <span class="text-muted">Scaled Average</span>
+            </label>
+            <div class="input-group">
+              <input type="number" step="0.1" class="form-control" id="inputInternalMarks" name="internal_marks"
+                     placeholder="e.g. 76.0" min="0" max="100"
+                     value="{{ result['inputs']['internal_marks'] if result else aggregates['avg_internal'] }}" required>
+              <span class="input-group-text bg-light text-muted">/ 100</span>
+            </div>
+          </div>
+
+          <!-- 4. Assignment Marks -->
+          <div class="mb-3">
+            <label for="inputAssignmentMarks" class="form-label fw-semibold small text-dark d-flex justify-content-between">
+              <span><i class="bi bi-file-earmark-check me-1 text-primary"></i> Assignment Marks (out of 100)</span>
+              <span class="text-muted">Continuous Assessment</span>
+            </label>
+            <div class="input-group">
+              <input type="number" step="0.1" class="form-control" id="inputAssignmentMarks" name="assignment_marks"
+                     placeholder="e.g. 82.0" min="0" max="100"
+                     value="{{ result['inputs']['assignment_marks'] if result else '80.0' }}" required>
+              <span class="input-group-text bg-light text-muted">/ 100</span>
+            </div>
+          </div>
+
+          <!-- 5. Previous Semester Marks -->
+          <div class="mb-4">
+            <label for="inputPrevSemester" class="form-label fw-semibold small text-dark d-flex justify-content-between">
+              <span><i class="bi bi-mortarboard me-1 text-primary"></i> Previous Semester Marks (out of 100)</span>
+              <span class="text-muted">Past Examination %</span>
+            </label>
+            <div class="input-group">
+              <input type="number" step="0.1" class="form-control" id="inputPrevSemester" name="previous_semester_marks"
+                     placeholder="e.g. 72.0" min="0" max="100"
+                     value="{{ result['inputs']['previous_semester_marks'] if result else '72.0' }}" required>
+              <span class="input-group-text bg-light text-muted">/ 100</span>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary-soft w-100 py-2 fw-bold fs-6">
+            <i class="bi bi-cpu-fill me-2"></i> Predict Final Examination Marks
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Prediction Output Result Card -->
+    <div class="col-lg-6">
+      {% if result %}
+        <!-- Active Prediction Result Card -->
+        <div class="custom-card p-4 border-2 border-primary shadow-sm h-100" style="background: linear-gradient(180deg, #ffffff 0%, #f0f9ff 100%);">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="badge bg-primary px-3 py-1">AI Prediction Output</span>
+            <small class="text-muted"><i class="bi bi-clock me-1"></i> Just Now</small>
+          </div>
+
+          <div class="text-center py-3">
+            <div class="text-muted text-uppercase fw-bold letter-spacing-1 small mb-1">Expected Final Exam Marks</div>
+            <div class="display-3 fw-extrabold text-primary mb-2">
+              {{ result['predicted_marks'] }}
+              <span class="fs-4 text-muted fw-normal">/ 100</span>
+            </div>
+
+            <div class="mb-4">
+              {% if result['category'] == 'Excellent' %}
+                <span class="badge badge-cat-excellent fs-6 px-4 py-2">
+                  <i class="bi bi-stars me-1"></i> Excellent (85–100)
+                </span>
+              {% elif result['category'] == 'Good' %}
+                <span class="badge badge-cat-good fs-6 px-4 py-2">
+                  <i class="bi bi-award me-1"></i> Good (70–84)
+                </span>
+              {% elif result['category'] == 'Average' %}
+                <span class="badge badge-cat-average fs-6 px-4 py-2">
+                  <i class="bi bi-dash-circle me-1"></i> Average (50–69)
+                </span>
+              {% else %}
+                <span class="badge badge-cat-needs-improvement fs-6 px-4 py-2">
+                  <i class="bi bi-exclamation-triangle me-1"></i> Needs Improvement (&lt;50)
+                </span>
+              {% endif %}
+            </div>
+
+            <!-- Progress Meter -->
+            <div class="progress mb-4" style="height: 10px;">
+              <div class="progress-bar bg-{{ result['badge_color'] }}" role="progressbar" style="width: {{ result['predicted_marks'] }}%;"></div>
+            </div>
+
+            <p class="text-secondary small mb-4">
+              Based on your attendance ({{ result['inputs']['attendance'] }}%), daily study time ({{ result['inputs']['study_hours'] }} hrs),
+              internal score ({{ result['inputs']['internal_marks'] }}%), and coursework, our Random Forest model forecasts a final exam performance in the 
+              <strong>{{ result['category'] }}</strong> category.
+            </p>
+
+            <div class="d-flex justify-content-center gap-2">
+              <a href="{{ url_for('recommendations') }}" class="btn btn-primary-soft">
+                <i class="bi bi-lightbulb-fill me-1"></i> View Improvement Suggestions
+              </a>
+              <a href="{{ url_for('reports') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-graph-up me-1"></i> Progress Reports
+              </a>
+            </div>
+          </div>
+        </div>
+
+      {% else %}
+        <!-- Standby Prompt Card -->
+        <div class="custom-card p-4 text-center h-100 d-flex flex-column justify-content-center">
+          <div class="mb-3">
+            <div class="metric-icon-box metric-icon-blue mx-auto" style="width: 70px; height: 70px; font-size: 2rem;">
+              <i class="bi bi-robot"></i>
+            </div>
+          </div>
+          <h4 class="fw-bold text-dark">Ready for AI Assessment</h4>
+          <p class="text-muted mx-auto mb-4" style="max-width: 420px;">
+            Fill in your study metrics on the left and click <strong>Predict Performance</strong>. Our trained Scikit-learn model will compute your projected final examination score out of 100.
+          </p>
+
+          <div class="p-3 bg-light rounded text-start border small mx-auto" style="max-width: 440px;">
+            <div class="fw-bold text-dark mb-2"><i class="bi bi-info-circle me-1 text-primary"></i> Performance Categories:</div>
+            <ul class="list-unstyled mb-0">
+              <li class="mb-1"><span class="badge badge-cat-excellent me-2">85 – 100</span> <strong>Excellent:</strong> Academic distinction standing</li>
+              <li class="mb-1"><span class="badge badge-cat-good me-2">70 – 84</span> <strong>Good:</strong> Solid first-class standing</li>
+              <li class="mb-1"><span class="badge badge-cat-average me-2">50 – 69</span> <strong>Average:</strong> Passing tier; optimization advised</li>
+              <li><span class="badge badge-cat-needs-improvement me-2">Below 50</span> <strong>Needs Improvement:</strong> Requires remedial intervention</li>
+            </ul>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- Real-Time What-If Scenario Simulation Studio -->
+  <div class="custom-card p-4 mb-4" style="background: linear-gradient(180deg, #f8fafc 0%, #f0f9ff 100%);">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 pb-2 border-bottom gap-2">
+      <div class="d-flex align-items-center gap-2">
+        <div class="metric-icon-box metric-icon-blue" style="width: 38px; height: 38px; font-size: 1.1rem;">
+          <i class="bi bi-sliders2"></i>
+        </div>
+        <div>
+          <h5 class="fw-bold text-dark mb-0">Interactive "What-If" Scenario Simulator</h5>
+          <small class="text-muted">Drag sliders to test how improving study hours or attendance impacts your final score in real-time</small>
+        </div>
+      </div>
+      <div>
+        <a href="{{ url_for('download_dataset') }}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-download me-1"></i> Download CSV Dataset (1,500 Records)
+        </a>
+      </div>
+    </div>
+
+    <div class="row g-4 align-items-center">
+      <!-- Sliders Column -->
+      <div class="col-lg-7">
+        <div class="row g-3">
+          
+          <!-- Study Hours Slider -->
+          <div class="col-12">
+            <div class="d-flex justify-content-between small fw-bold mb-1">
+              <span><i class="bi bi-clock-history text-primary me-1"></i> Daily Study Hours</span>
+              <span id="sliderHoursVal" class="text-primary fs-6">4.0 hrs/day</span>
+            </div>
+            <input type="range" class="form-range" id="simSliderHours" min="1.0" max="10.0" step="0.5" value="4.0">
+          </div>
+
+          <!-- Attendance Slider -->
+          <div class="col-12">
+            <div class="d-flex justify-content-between small fw-bold mb-1">
+              <span><i class="bi bi-calendar-check text-success me-1"></i> Attendance Percentage</span>
+              <span id="sliderAttVal" class="text-success fs-6">80.0%</span>
+            </div>
+            <input type="range" class="form-range" id="simSliderAtt" min="50" max="100" step="1" value="80">
+          </div>
+
+          <!-- Internal Marks Slider -->
+          <div class="col-12">
+            <div class="d-flex justify-content-between small fw-bold mb-1">
+              <span><i class="bi bi-journal-check text-info me-1"></i> Internal Assessment Marks</span>
+              <span id="sliderInternalVal" class="text-info fs-6">75.0%</span>
+            </div>
+            <input type="range" class="form-range" id="simSliderInternal" min="40" max="100" step="1" value="75">
+          </div>
+
+          <!-- Assignment Marks Slider -->
+          <div class="col-sm-6">
+            <div class="d-flex justify-content-between small fw-bold mb-1">
+              <span><i class="bi bi-file-earmark-text text-secondary me-1"></i> Assignments</span>
+              <span id="sliderAssignVal" class="text-secondary">80.0%</span>
+            </div>
+            <input type="range" class="form-range" id="simSliderAssign" min="40" max="100" step="1" value="80">
+          </div>
+
+          <!-- Previous Semester Slider -->
+          <div class="col-sm-6">
+            <div class="d-flex justify-content-between small fw-bold mb-1">
+              <span><i class="bi bi-mortarboard text-secondary me-1"></i> Prev Semester</span>
+              <span id="sliderPrevVal" class="text-secondary">72.0%</span>
+            </div>
+            <input type="range" class="form-range" id="simSliderPrev" min="40" max="100" step="1" value="72">
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Live Simulator Output Card -->
+      <div class="col-lg-5">
+        <div class="p-4 bg-white rounded-4 border shadow-sm text-center">
+          <small class="text-uppercase text-muted fw-bold letter-spacing-1">Simulated Final Examination Mark</small>
+          <div class="display-4 fw-extrabold text-primary my-2" id="simLiveScore">
+            --.- <span class="fs-5 text-muted fw-normal">/ 100</span>
+          </div>
+          <div class="mb-3" id="simLiveBadge">
+            <span class="badge bg-secondary px-3 py-2">Calculating...</span>
+          </div>
+          <div class="progress mb-3" style="height: 8px;">
+            <div id="simLiveBar" class="progress-bar bg-primary" style="width: 50%;"></div>
+          </div>
+          <p class="small text-muted mb-0" id="simLiveComment">
+            Moving sliders recalculates the Machine Learning forecast in real-time.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prediction History Table -->
+  <div class="custom-card mb-4">
+    <div class="card-header-clean">
+      <div>
+        <h5 class="text-dark">Your Prediction History</h5>
+        <small class="text-muted">Logged predictions securely saved in SQLite database</small>
+      </div>
+      <span class="badge bg-light text-dark border">{{ past_predictions|length }} Total Predictions</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table custom-table table-hover align-middle">
+        <thead>
+          <tr>
+            <th>Date & Time</th>
+            <th>Attendance</th>
+            <th>Study Hours</th>
+            <th>Internal Marks</th>
+            <th>Assignments</th>
+            <th>Prev Semester</th>
+            <th>Predicted Score</th>
+            <th>Performance Tier</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in past_predictions %}
+            <tr>
+              <td>{{ p['created_at'] }}</td>
+              <td>{{ p['attendance'] }}%</td>
+              <td>{{ p['study_hours'] }} hrs/day</td>
+              <td>{{ p['internal_marks'] }}%</td>
+              <td>{{ p['assignment_marks'] }}%</td>
+              <td>{{ p['previous_semester_marks'] }}%</td>
+              <td>
+                <span class="fw-bold fs-6 text-primary">{{ p['predicted_marks'] }}</span> / 100
+              </td>
+              <td>
+                {% if p['category'] == 'Excellent' %}
+                  <span class="badge badge-cat-excellent">{{ p['category'] }}</span>
+                {% elif p['category'] == 'Good' %}
+                  <span class="badge badge-cat-good">{{ p['category'] }}</span>
+                {% elif p['category'] == 'Average' %}
+                  <span class="badge badge-cat-average">{{ p['category'] }}</span>
+                {% else %}
+                  <span class="badge badge-cat-needs-improvement">{{ p['category'] }}</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="8" class="text-center py-4 text-muted">
+                No past predictions logged yet. Run your first forecast using the form above!
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Model Architecture Transparency Card -->
+  <div class="custom-card p-3 bg-light border">
+    <div class="row align-items-center">
+      <div class="col-md-8">
+        <h6 class="fw-bold text-dark mb-1"><i class="bi bi-gear-wide-connected me-1 text-primary"></i> Machine Learning Engine Specifications</h6>
+        <p class="small text-muted mb-0">
+          Model: <strong>RandomForestRegressor</strong> (150 trees) • Evaluation: <strong>MAE: {{ metrics.get('mae', '3.05') }}</strong>, 
+          <strong>MSE: {{ metrics.get('mse', '14.0') }}</strong>, <strong>R²: {{ metrics.get('r2_score', '0.88') }}</strong>.
+        </p>
+      </div>
+      <div class="col-md-4 text-md-end mt-2 mt-md-0">
+        <span class="badge bg-success"><i class="bi bi-check2 me-1"></i> Validated Scikit-Learn Model</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+

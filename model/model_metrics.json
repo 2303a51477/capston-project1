@@ -1,0 +1,23 @@
+{
+    "mae": 3.052,
+    "mse": 13.995,
+    "rmse": 3.741,
+    "r2_score": 0.8799,
+    "feature_importances": {
+        "attendance": 0.0808,
+        "study_hours": 0.0777,
+        "internal_marks": 0.6296,
+        "assignment_marks": 0.1807,
+        "previous_semester_marks": 0.0311
+    },
+    "features": [
+        "attendance",
+        "study_hours",
+        "internal_marks",
+        "assignment_marks",
+        "previous_semester_marks"
+    ],
+    "train_samples": 1200,
+    "test_samples": 300,
+    "model_type": "RandomForestRegressor"
+}

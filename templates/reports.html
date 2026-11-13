@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+
+{% block title %}Academic Progress Reports | AI Student Performance Prediction System{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+  <!-- Page Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3 no-print">
+    <div>
+      <h3 class="fw-bold text-dark mb-1">Academic Progress & Analytics Reports</h3>
+      <p class="text-muted small mb-0">Comprehensive semester performance analytics, history graphs, and official report generator.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-printer me-1"></i> Print View
+      </button>
+      <a href="{{ url_for('download_report_pdf') }}" class="btn btn-primary-soft btn-sm">
+        <i class="bi bi-file-earmark-pdf-fill me-1"></i> Download PDF Report
+      </a>
+    </div>
+  </div>
+
+  <!-- Report Header Card (Shows on Screen and in Print) -->
+  <div class="custom-card p-4 mb-4">
+    <div class="row align-items-center g-3">
+      <div class="col-sm-2 text-center text-sm-start">
+        <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="College Emblem" width="64" height="64">
+      </div>
+      <div class="col-sm-6">
+        <h4 class="fw-bold text-dark mb-1">{{ student['name'] }}</h4>
+        <div class="text-muted small">
+          <strong>Student ID:</strong> {{ student['student_id'] }} &bull; 
+          <strong>Email:</strong> {{ student['email'] }}
+        </div>
+        <div class="text-muted small">
+          <strong>Department:</strong> {{ student['department'] }} &bull; 
+          <strong>Semester:</strong> Semester {{ student['semester'] }}
+        </div>
+      </div>
+      <div class="col-sm-4 text-sm-end">
+        <div class="d-inline-block p-2 bg-light rounded text-sm-end border">
+          <div class="small text-muted">Latest AI Prediction:</div>
+          <div class="fw-bold fs-5 text-primary">
+            {% if aggregates['predicted_marks'] %}
+              {{ aggregates['predicted_marks'] }} / 100
+            {% else %}
+              N/A
+            {% endif %}
+          </div>
+          <span class="badge badge-cat-{{ aggregates['category']|lower|replace(' ', '-') }}">
+            {{ aggregates['category'] }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Metric Summary Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3">
+      <div class="metric-stat-card">
+        <div class="metric-icon-box metric-icon-green"><i class="bi bi-calendar2-check-fill"></i></div>
+        <div>
+          <div class="metric-label">Overall Attendance</div>
+          <div class="metric-value">{{ aggregates['overall_attendance_pct'] }}%</div>
+          <div class="small text-muted">{{ aggregates['total_attended'] }} / {{ aggregates['total_classes'] }} classes</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+      <div class="metric-stat-card">
+        <div class="metric-icon-box metric-icon-blue"><i class="bi bi-journal-check"></i></div>
+        <div>
+          <div class="metric-label">Avg Internal Score</div>
+          <div class="metric-value">{{ aggregates['avg_internal'] }}%</div>
+          <div class="small text-muted">Continuous Assessment</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+      <div class="metric-stat-card">
+        <div class="metric-icon-box metric-icon-purple"><i class="bi bi-cpu-fill"></i></div>
+        <div>
+          <div class="metric-label">AI Forecast</div>
+          <div class="metric-value">
+            {{ aggregates['predicted_marks'] or 'N/A' }}
+          </div>
+          <div class="small text-muted">Final Exam Target</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+      <div class="metric-stat-card">
+        <div class="metric-icon-box metric-icon-yellow"><i class="bi bi-bar-chart-fill"></i></div>
+        <div>
+          <div class="metric-label">Predictions Logged</div>
+          <div class="metric-value">{{ prediction_history|length }}</div>
+          <div class="small text-muted">Forecast snapshots</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart Visualizations Row -->
+  <div class="row g-4 mb-4">
+    
+    <!-- Chart 1: AI Prediction Trend Over Time -->
+    <div class="col-lg-7">
+      <div class="custom-card h-100">
+        <div class="card-header-clean">
+          <div>
+            <h5 class="text-dark">Prediction Trajectory (Line Chart)</h5>
+            <small class="text-muted">AI predicted score evolution across evaluations</small>
+          </div>
+          <span class="badge bg-light text-primary border">Random Forest Model</span>
+        </div>
+        <div class="p-3" style="height: 300px;">
+          {% if prediction_history %}
+            <canvas id="predictionHistoryChart"></canvas>
+          {% else %}
+            <div class="text-center py-5 text-muted">
+              <i class="bi bi-graph-up display-6 d-block mb-2"></i>
+              No prediction history records yet.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart 2: Subject Performance Radar -->
+    <div class="col-lg-5">
+      <div class="custom-card h-100">
+        <div class="card-header-clean">
+          <div>
+            <h5 class="text-dark">Subject Mastery Radar</h5>
+            <small class="text-muted">Multi-subject internal proficiency</small>
+          </div>
+          <span class="badge bg-light text-secondary border">Continuous 100%</span>
+        </div>
+        <div class="p-3" style="height: 300px;">
+          {% if internal_records %}
+            <canvas id="subjectPerformanceRadar"></canvas>
+          {% else %}
+            <div class="text-center py-5 text-muted">
+              <i class="bi bi-radar display-6 d-block mb-2"></i>
+              No subject internal marks recorded yet.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Detailed Tables Row -->
+  <div class="row g-4 mb-4">
+    
+    <!-- Attendance Table -->
+    <div class="col-lg-6">
+      <div class="custom-card h-100">
+        <div class="card-header-clean">
+          <h5 class="text-dark">Subject Attendance Breakdown</h5>
+          <a href="{{ url_for('attendance') }}" class="btn btn-sm btn-outline-soft no-print">Edit</a>
+        </div>
+        <div class="table-responsive">
+          <table class="table custom-table table-hover align-middle">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Subject Name</th>
+                <th>Attended / Total</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for a in attendance_records %}
+                {% set pct = (a['attended_classes'] / a['total_classes'] * 100)|round(1) if a['total_classes'] > 0 else 0 %}
+                <tr>
+                  <td><span class="badge bg-light text-dark border">{{ a['subject_code'] }}</span></td>
+                  <td><strong>{{ a['subject_name'] }}</strong></td>
+                  <td>{{ a['attended_classes'] }} / {{ a['total_classes'] }} ({{ pct }}%)</td>
+                  <td>
+                    {% if pct >= 75 %}
+                      <span class="badge badge-status badge-attendance-green">Safe</span>
+                    {% elif pct >= 65 %}
+                      <span class="badge badge-status badge-attendance-yellow">Warning</span>
+                    {% else %}
+                      <span class="badge badge-status badge-attendance-red">Critical</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="4" class="text-center py-3 text-muted">No attendance data logged.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Internal Marks Table -->
+    <div class="col-lg-6">
+      <div class="custom-card h-100">
+        <div class="card-header-clean">
+          <h5 class="text-dark">Internal Assessment Breakdown</h5>
+          <a href="{{ url_for('internals') }}" class="btn btn-sm btn-outline-soft no-print">Edit</a>
+        </div>
+        <div class="table-responsive">
+          <table class="table custom-table table-hover align-middle">
+            <thead>
+              <tr>
+                <th>Subject Name</th>
+                <th class="text-center">IA1 + IA2</th>
+                <th class="text-center">Assign</th>
+                <th class="text-center">Total (75)</th>
+                <th class="text-end">Scaled %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for m in internal_records %}
+                {% set total = m['ia1'] + m['ia2'] + m['assignment_marks'] %}
+                {% set scaled = ((total / 75.0) * 100)|round(1) %}
+                <tr>
+                  <td><strong>{{ m['subject_name'] }}</strong></td>
+                  <td class="text-center">{{ m['ia1'] }} + {{ m['ia2'] }}</td>
+                  <td class="text-center">{{ m['assignment_marks'] }}</td>
+                  <td class="text-center">{{ total|round(1) }} / 75</td>
+                  <td class="text-end fw-bold text-primary">{{ scaled }}%</td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="5" class="text-center py-3 text-muted">No internal marks recorded.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PDF Download Callout Banner -->
+  <div class="custom-card p-4 border-0 text-center no-print" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);">
+    <div class="max-w-600 mx-auto">
+      <h5 class="fw-bold text-dark mb-2">Need an Official Physical or PDF Copy?</h5>
+      <p class="small text-secondary mb-3">Download your official college academic performance & AI prediction report with complete charts, tables, and verification blocks.</p>
+      <a href="{{ url_for('download_report_pdf') }}" class="btn btn-primary-soft px-4">
+        <i class="bi bi-file-earmark-arrow-down-fill me-2"></i> Download Official Performance PDF
+      </a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+

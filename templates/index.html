@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+
+{% block title %}AI-Based Student Performance Prediction System | Welcome{% endblock %}
+
+{% block public_content %}
+<!-- Hero Section -->
+<section class="landing-hero">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-6">
+        <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill bg-light border mb-3">
+          <span class="badge bg-primary">AI Powered</span>
+          <span class="small fw-semibold text-secondary">Random Forest Regression Model</span>
+        </div>
+        <h1 class="display-5 fw-extrabold text-dark mb-3 lh-sm">
+          AI-Based Student <br>
+          <span class="text-primary">Performance Prediction</span> System
+        </h1>
+        <p class="lead text-secondary mb-4 fs-6">
+          Empowering college students to forecast examination outcomes, track attendance health, manage internal assessment scores, and unlock personalized AI recommendations for academic excellence.
+        </p>
+
+        <div class="d-flex flex-wrap gap-3">
+          {% if session.get('student_db_id') %}
+            <a href="{{ url_for('dashboard') }}" class="btn btn-primary-soft btn-lg px-4">
+              <i class="bi bi-grid-1x2-fill me-2"></i> Open My Dashboard
+            </a>
+          {% else %}
+            <a href="{{ url_for('register') }}" class="btn btn-primary-soft btn-lg px-4">
+              <i class="bi bi-rocket-takeoff-fill me-2"></i> Get Started
+            </a>
+            <a href="{{ url_for('login') }}" class="btn btn-outline-soft btn-lg px-4">
+              <i class="bi bi-box-arrow-in-right me-2"></i> Student Login
+            </a>
+          {% endif %}
+        </div>
+
+        <div class="row mt-4 pt-3 border-top g-3">
+          <div class="col-4">
+            <div class="fw-bold fs-5 text-dark">88.0%</div>
+            <div class="small text-muted">ML Model R² Score</div>
+          </div>
+          <div class="col-4">
+            <div class="fw-bold fs-5 text-dark">&lt; 3.1</div>
+            <div class="small text-muted">Mean Absolute Error</div>
+          </div>
+          <div class="col-4">
+            <div class="fw-bold fs-5 text-dark">100%</div>
+            <div class="small text-muted">Student Focused</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-6 text-center">
+        <div class="p-2 bg-white rounded-4 shadow-sm border">
+          <img src="{{ url_for('static', filename='img/student_hero.svg') }}" alt="Student AI Analytics Illustration" class="img-fluid" style="max-height: 420px;">
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Feature Cards Section -->
+<section class="py-5 bg-white">
+  <div class="container">
+    <div class="text-center max-w-700 mx-auto mb-5">
+      <h6 class="text-primary fw-bold text-uppercase letter-spacing-1">Smart Academic Tools</h6>
+      <h2 class="fw-bold text-dark">Everything a College Student Needs to Excel</h2>
+      <p class="text-muted">No complicated data science jargon. Simple, intuitive tools designed to help every student understand their standing and improve results.</p>
+    </div>
+
+    <div class="row g-4">
+      <!-- Feature 1 -->
+      <div class="col-md-6 col-lg-3">
+        <div class="landing-feature-card">
+          <div class="metric-icon-box metric-icon-blue mb-3">
+            <i class="bi bi-cpu-fill"></i>
+          </div>
+          <h5 class="fw-bold text-dark">AI Final Exam Prediction</h5>
+          <p class="text-muted small mb-0">Trained Machine Learning regressor predicts your expected final examination score out of 100 based on your current inputs.</p>
+        </div>
+      </div>
+
+      <!-- Feature 2 -->
+      <div class="col-md-6 col-lg-3">
+        <div class="landing-feature-card">
+          <div class="metric-icon-box metric-icon-green mb-3">
+            <i class="bi bi-calendar-check-fill"></i>
+          </div>
+          <h5 class="fw-bold text-dark">Attendance Tracking</h5>
+          <p class="text-muted small mb-0">Track subject-wise attendance with green (≥75%), yellow (65–74%), and red (&lt;65%) indicators, plus target calculators.</p>
+        </div>
+      </div>
+
+      <!-- Feature 3 -->
+      <div class="col-md-6 col-lg-3">
+        <div class="landing-feature-card">
+          <div class="metric-icon-box metric-icon-yellow mb-3">
+            <i class="bi bi-journal-check"></i>
+          </div>
+          <h5 class="fw-bold text-dark">Internal Assessment Marks</h5>
+          <p class="text-muted small mb-0">Log IA1, IA2, assignment scores, and previous semester marks with auto-calculated weighted averages and grade metrics.</p>
+        </div>
+      </div>
+
+      <!-- Feature 4 -->
+      <div class="col-md-6 col-lg-3">
+        <div class="landing-feature-card">
+          <div class="metric-icon-box metric-icon-purple mb-3">
+            <i class="bi bi-lightbulb-fill"></i>
+          </div>
+          <h5 class="fw-bold text-dark">Actionable Recommendations</h5>
+          <p class="text-muted small mb-0">Receive personalized, plain-language improvement tips: attendance recovery plans, study timetables, and question banks.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How It Works Section -->
+<section class="py-5 bg-light border-top border-bottom">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h6 class="text-primary fw-bold text-uppercase">Simple 3-Step Process</h6>
+      <h2 class="fw-bold text-dark">How EduPredict AI Works</h2>
+    </div>
+
+    <div class="row g-4 text-center">
+      <div class="col-md-4">
+        <div class="bg-white p-4 rounded-4 border h-100">
+          <div class="display-6 fw-bold text-primary mb-2">01</div>
+          <h5 class="fw-bold mb-2">Input Academic Data</h5>
+          <p class="text-muted small mb-0">Enter your daily study hours, attendance numbers, and internal assessment test marks.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="bg-white p-4 rounded-4 border h-100">
+          <div class="display-6 fw-bold text-primary mb-2">02</div>
+          <h5 class="fw-bold mb-2">AI Analyzes & Forecasts</h5>
+          <p class="text-muted small mb-0">Our trained Random Forest model calculates your probable final marks and performance category.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="bg-white p-4 rounded-4 border h-100">
+          <div class="display-6 fw-bold text-primary mb-2">03</div>
+          <h5 class="fw-bold mb-2">Follow Personalized Plan</h5>
+          <p class="text-muted small mb-0">Implement tailored recommendations to boost attendance and target an Excellent tier score.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-center mt-5">
+      <a href="{{ url_for('register') }}" class="btn btn-primary-soft btn-lg px-5">
+        Get Started Now — It's Free
+      </a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+

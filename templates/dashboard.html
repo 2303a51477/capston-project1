@@ -1,0 +1,302 @@
+{% extends 'base.html' %}
+
+{% block title %}Student Dashboard | AI-Based Student Performance Prediction System{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+  <!-- Welcome Banner -->
+  <div class="custom-card p-4 mb-4 border-0" style="background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 100%);">
+    <div class="row align-items-center">
+      <div class="col-md-8">
+        <div class="d-inline-flex align-items-center gap-2 mb-2">
+          <span class="badge bg-primary px-3 py-1">{{ student['student_id'] }}</span>
+          <span class="text-secondary small fw-semibold">{{ student['department'] }} • Sem {{ student['semester'] }}</span>
+        </div>
+        <h2 class="fw-bold text-dark mb-1">Welcome back, {{ student['name'] }}! 👋</h2>
+        <p class="text-secondary mb-0">Here is your continuous academic performance summary and latest AI exam forecast.</p>
+      </div>
+      <div class="col-md-4 text-md-end mt-3 mt-md-0">
+        <a href="{{ url_for('predict') }}" class="btn btn-primary-soft me-2">
+          <i class="bi bi-cpu-fill me-1"></i> AI Forecast
+        </a>
+        <a href="{{ url_for('download_report_pdf') }}" class="btn btn-outline-secondary">
+          <i class="bi bi-printer me-1"></i> Export PDF
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {% if aggregates['attendance_count'] == 0 and aggregates['marks_count'] == 0 %}
+    <!-- Empty State for Brand New Student -->
+    <div class="custom-card p-5 text-center mb-4">
+      <div class="mb-3">
+        <i class="bi bi-folder-plus text-primary display-4"></i>
+      </div>
+      <h4 class="fw-bold text-dark">Get Started with Your Academic Data</h4>
+      <p class="text-muted mx-auto" style="max-width: 500px;">
+        You don't have any subjects or attendance logged yet. Add your courses manually or load sample college coursework with one click to test the AI system!
+      </p>
+      <div class="d-flex justify-content-center gap-3">
+        <form action="{{ url_for('seed_demo_records') }}" method="POST">
+          <button type="submit" class="btn btn-primary-soft">
+            <i class="bi bi-magic me-1"></i> Load Sample College Coursework
+          </button>
+        </form>
+        <a href="{{ url_for('attendance') }}" class="btn btn-outline-soft">
+          <i class="bi bi-plus-circle me-1"></i> Add Subject Manually
+        </a>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Top 4 Metric Stat Cards -->
+  <div class="row g-3 mb-4">
+    
+    <!-- 1. Total Attendance % -->
+    <div class="col-sm-6 col-xl-3">
+      <div class="metric-stat-card">
+        {% if aggregates['overall_attendance_pct'] >= 75 %}
+          <div class="metric-icon-box metric-icon-green"><i class="bi bi-calendar-check-fill"></i></div>
+        {% elif aggregates['overall_attendance_pct'] >= 65 %}
+          <div class="metric-icon-box metric-icon-yellow"><i class="bi bi-clock-history"></i></div>
+        {% else %}
+          <div class="metric-icon-box" style="background-color: #fee2e2; color: #dc2626;"><i class="bi bi-exclamation-triangle-fill"></i></div>
+        {% endif %}
+        <div>
+          <div class="metric-label">Total Attendance</div>
+          <div class="metric-value">
+            {{ aggregates['overall_attendance_pct'] }}%
+          </div>
+          <div class="small">
+            {% if aggregates['overall_attendance_pct'] >= 75 %}
+              <span class="text-success fw-bold"><i class="bi bi-check-circle me-1"></i>Safe (≥75%)</span>
+            {% elif aggregates['overall_attendance_pct'] >= 65 %}
+              <span class="text-warning fw-bold"><i class="bi bi-exclamation-circle me-1"></i>Warning (65-74%)</span>
+            {% else %}
+              <span class="text-danger fw-bold"><i class="bi bi-x-circle me-1"></i>Critical (&lt;65%)</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Average Internal Marks -->
+    <div class="col-sm-6 col-xl-3">
+      <div class="metric-stat-card">
+        <div class="metric-icon-box metric-icon-blue"><i class="bi bi-journal-bookmark-fill"></i></div>
+        <div>
+          <div class="metric-label">Avg Internal Marks</div>
+          <div class="metric-value">{{ aggregates['avg_internal'] }}%</div>
+          <div class="small text-muted">Across {{ aggregates['marks_count'] }} recorded subjects</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Predicted Final Marks -->
+    <div class="col-sm-6 col-xl-3">
+      <div class="metric-stat-card">
+        <div class="metric-icon-box metric-icon-purple"><i class="bi bi-stars"></i></div>
+        <div>
+          <div class="metric-label">Predicted Final Mark</div>
+          <div class="metric-value">
+            {% if aggregates['predicted_marks'] %}
+              {{ aggregates['predicted_marks'] }}<span class="fs-6 text-muted fw-normal"> / 100</span>
+            {% else %}
+              <span class="fs-4 text-muted">N/A</span>
+            {% endif %}
+          </div>
+          <div class="small text-muted">Random Forest Regressor</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Performance Status Tier -->
+    <div class="col-sm-6 col-xl-3">
+      <div class="metric-stat-card">
+        <div class="metric-icon-box metric-icon-yellow"><i class="bi bi-trophy-fill"></i></div>
+        <div>
+          <div class="metric-label">Performance Status</div>
+          <div class="metric-value fs-4">
+            {% if aggregates['category'] == 'Excellent' %}
+              <span class="badge badge-status badge-cat-excellent">{{ aggregates['category'] }}</span>
+            {% elif aggregates['category'] == 'Good' %}
+              <span class="badge badge-status badge-cat-good">{{ aggregates['category'] }}</span>
+            {% elif aggregates['category'] == 'Average' %}
+              <span class="badge badge-status badge-cat-average">{{ aggregates['category'] }}</span>
+            {% elif aggregates['category'] == 'Needs Improvement' %}
+              <span class="badge badge-status badge-cat-needs-improvement">{{ aggregates['category'] }}</span>
+            {% else %}
+              <span class="badge bg-secondary">Pending</span>
+            {% endif %}
+          </div>
+          <div class="small text-muted">Academic Rating</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Performance Charts Row -->
+  <div class="row g-4 mb-4">
+    
+    <!-- Chart 1: Subject-wise Internal Assessment Marks -->
+    <div class="col-lg-8">
+      <div class="custom-card h-100">
+        <div class="card-header-clean">
+          <div>
+            <h5 class="text-dark">Internal Assessment Breakdown</h5>
+            <small class="text-muted">Subject-wise marks distribution for IA1, IA2, and Assignments</small>
+          </div>
+          <a href="{{ url_for('internals') }}" class="btn btn-sm btn-outline-soft">Manage Marks</a>
+        </div>
+        <div class="p-3" style="min-height: 280px; position: relative;">
+          {% if internal_records %}
+            <div style="height: 270px;">
+              <canvas id="dashboardSubjectMarksChart"></canvas>
+            </div>
+          {% else %}
+            <div class="text-center py-5 text-muted">
+              <i class="bi bi-bar-chart-line display-6 mb-2 d-block"></i>
+              No internal assessment marks recorded yet.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart 2: Attendance Gauge & Quick Summary -->
+    <div class="col-lg-4">
+      <div class="custom-card h-100">
+        <div class="card-header-clean">
+          <div>
+            <h5 class="text-dark">Attendance Health</h5>
+            <small class="text-muted">Total classes attended vs missed</small>
+          </div>
+          <a href="{{ url_for('attendance') }}" class="btn btn-sm btn-outline-soft">View Details</a>
+        </div>
+        <div class="p-3 text-center">
+          <div style="height: 180px; position: relative; margin: 0 auto; width: 180px;">
+            <canvas id="dashboardAttendanceGauge" data-pct="{{ aggregates['overall_attendance_pct'] }}"></canvas>
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+              <span class="fs-4 fw-bold text-dark">{{ aggregates['overall_attendance_pct'] }}%</span>
+            </div>
+          </div>
+          <div class="mt-3 pt-2 border-top text-start small">
+            <div class="d-flex justify-content-between mb-1">
+              <span class="text-muted">Classes Attended:</span>
+              <span class="fw-bold">{{ aggregates['total_attended'] }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-1">
+              <span class="text-muted">Total Classes Conducted:</span>
+              <span class="fw-bold">{{ aggregates['total_classes'] }}</span>
+            </div>
+            <div class="d-flex justify-content-between">
+              <span class="text-muted">Required Minimum:</span>
+              <span class="fw-bold text-success">75.0%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Row: Recent Prediction History & Top AI Suggestion -->
+  <div class="row g-4">
+    
+    <!-- Recent Prediction Table -->
+    <div class="col-lg-8">
+      <div class="custom-card">
+        <div class="card-header-clean">
+          <div>
+            <h5 class="text-dark">Recent AI Predictions</h5>
+            <small class="text-muted">History of Machine Learning exam forecasts</small>
+          </div>
+          <a href="{{ url_for('predict') }}" class="btn btn-sm btn-primary-soft">Run New Prediction</a>
+        </div>
+        <div class="table-responsive">
+          <table class="table custom-table table-hover">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Attendance</th>
+                <th>Study Hrs/Day</th>
+                <th>Internals</th>
+                <th>Predicted Marks</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in recent_predictions %}
+                <tr>
+                  <td>{{ p['created_at'][:10] }}</td>
+                  <td>{{ p['attendance'] }}%</td>
+                  <td>{{ p['study_hours'] }} hrs</td>
+                  <td>{{ p['internal_marks'] }}%</td>
+                  <td><strong class="text-primary">{{ p['predicted_marks'] }}</strong> / 100</td>
+                  <td>
+                    {% if p['category'] == 'Excellent' %}
+                      <span class="badge badge-status badge-cat-excellent">{{ p['category'] }}</span>
+                    {% elif p['category'] == 'Good' %}
+                      <span class="badge badge-status badge-cat-good">{{ p['category'] }}</span>
+                    {% elif p['category'] == 'Average' %}
+                      <span class="badge badge-status badge-cat-average">{{ p['category'] }}</span>
+                    {% else %}
+                      <span class="badge badge-status badge-cat-needs-improvement">{{ p['category'] }}</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="6" class="text-center py-4 text-muted">
+                    No predictions made yet. <a href="{{ url_for('predict') }}">Run your first AI prediction!</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Suggestion Snippet -->
+    <div class="col-lg-4">
+      <div class="custom-card h-100">
+        <div class="card-header-clean">
+          <div>
+            <h5 class="text-dark">AI Improvement Spotlight</h5>
+            <small class="text-muted">Top personalized recommendation</small>
+          </div>
+          <a href="{{ url_for('recommendations') }}" class="btn btn-sm btn-outline-soft">All Advice</a>
+        </div>
+        <div class="p-3">
+          {% if top_recommendation %}
+            <div class="rec-card rec-{{ top_recommendation['level'] }} mb-0">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="bi {{ top_recommendation['icon'] }} fs-5"></i>
+                <h6 class="fw-bold mb-0">{{ top_recommendation['title'] }}</h6>
+              </div>
+              <p class="small text-secondary mb-2">{{ top_recommendation['advice'] }}</p>
+              <div class="bg-light p-2 rounded small border">
+                <strong>Action: </strong>{{ top_recommendation['action_plan'] }}
+              </div>
+            </div>
+          {% else %}
+            <p class="text-muted small">Keep maintaining your academic schedule and log your coursework data to view suggestions.</p>
+          {% endif %}
+          
+          <div class="mt-3 text-center">
+            <a href="{{ url_for('recommendations') }}" class="btn btn-sm btn-outline-primary w-100">
+              <i class="bi bi-lightbulb-fill me-1"></i> Open Personalized Improvement Center
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+

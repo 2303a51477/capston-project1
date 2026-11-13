@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+
+{% block title %}Personalized Recommendations | AI Student Performance Prediction System{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+  <!-- Page Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+      <h3 class="fw-bold text-dark mb-1">Personalized Improvement Recommendations</h3>
+      <p class="text-muted small mb-0">AI-generated guidance customized to your attendance, internal marks, study hours, and trajectory.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('predict') }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-cpu me-1"></i> Update Metrics
+      </a>
+      <a href="{{ url_for('download_report_pdf') }}" class="btn btn-primary-soft btn-sm">
+        <i class="bi bi-file-earmark-pdf me-1"></i> Download Action Plan
+      </a>
+    </div>
+  </div>
+
+  <!-- Metric Context Bar -->
+  <div class="custom-card p-3 mb-4 bg-light border">
+    <div class="row g-3 text-center text-sm-start align-items-center">
+      <div class="col-sm-3 border-end-sm">
+        <div class="small text-muted text-uppercase fw-semibold">Attendance</div>
+        <div class="fw-bold fs-5 text-dark">{{ aggregates['overall_attendance_pct'] }}%</div>
+      </div>
+      <div class="col-sm-3 border-end-sm">
+        <div class="small text-muted text-uppercase fw-semibold">Avg Internal Marks</div>
+        <div class="fw-bold fs-5 text-dark">{{ aggregates['avg_internal'] }}%</div>
+      </div>
+      <div class="col-sm-3 border-end-sm">
+        <div class="small text-muted text-uppercase fw-semibold">Study Habit</div>
+        <div class="fw-bold fs-5 text-dark">{{ study_hours }} hrs/day</div>
+      </div>
+      <div class="col-sm-3">
+        <div class="small text-muted text-uppercase fw-semibold">Predicted Outcome</div>
+        <div class="fw-bold fs-5 text-primary">
+          {% if aggregates['predicted_marks'] %}
+            {{ aggregates['predicted_marks'] }} / 100 ({{ aggregates['category'] }})
+          {% else %}
+            Not Evaluated
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recommendation Cards List -->
+  <div class="row g-4 mb-4">
+    <div class="col-lg-8">
+      <h5 class="fw-bold text-dark mb-3"><i class="bi bi-stars text-primary me-2"></i>Actionable Improvement Advice</h5>
+
+      {% for rec in recommendations %}
+        <div class="rec-card rec-{{ rec['level'] }} p-4 mb-3">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="d-flex align-items-center gap-2">
+              <span class="metric-icon-box" style="width: 38px; height: 38px; font-size: 1.2rem;
+                {% if rec['level'] == 'danger' %}background-color: #fee2e2; color: #dc2626;
+                {% elif rec['level'] == 'warning' %}background-color: #fef3c7; color: #d97706;
+                {% elif rec['level'] == 'success' %}background-color: #dcfce7; color: #16a34a;
+                {% else %}background-color: #e0f2fe; color: #0284c7;{% endif %}">
+                <i class="bi {{ rec['icon'] }}"></i>
+              </span>
+              <div>
+                <h6 class="fw-bold text-dark mb-0">{{ rec['title'] }}</h6>
+                <span class="badge bg-light text-secondary border" style="font-size: 0.7rem;">{{ rec['category'] }}</span>
+              </div>
+            </div>
+            
+            {% if rec['level'] == 'danger' %}
+              <span class="badge bg-danger">Critical Priority</span>
+            {% elif rec['level'] == 'warning' %}
+              <span class="badge bg-warning text-dark">High Priority</span>
+            {% elif rec['level'] == 'success' %}
+              <span class="badge bg-success">Strong Discipline</span>
+            {% else %}
+              <span class="badge bg-info text-dark">Optimization Tip</span>
+            {% endif %}
+          </div>
+
+          <p class="text-secondary small mt-2 mb-3">
+            {{ rec['advice'] }}
+          </p>
+
+          <div class="p-3 bg-light rounded-3 border">
+            <div class="small fw-bold text-dark mb-1"><i class="bi bi-arrow-right-circle-fill text-primary me-1"></i> Recommended Action:</div>
+            <div class="small text-dark">{{ rec['action_plan'] }}</div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Suggested Daily Study Timetable -->
+    <div class="col-lg-4">
+      <div class="custom-card p-4 mb-4">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <div class="metric-icon-box metric-icon-purple" style="width: 38px; height: 38px; font-size: 1.2rem;">
+            <i class="bi bi-calendar2-week-fill"></i>
+          </div>
+          <div>
+            <h6 class="fw-bold text-dark mb-0">Daily Study Timetable</h6>
+            <small class="text-muted">Recommended 3.5 - 4.5 Hour Routine</small>
+          </div>
+        </div>
+
+        <p class="small text-muted mb-3">
+          A proven, structured schedule designed for college engineering and science students to balance lectures, coursework, and deep conceptual study:
+        </p>
+
+        <div class="list-group list-group-flush small">
+          <div class="list-group-item px-0 py-2 border-bottom">
+            <div class="d-flex justify-content-between fw-bold text-dark">
+              <span><i class="bi bi-sun text-warning me-1"></i> Morning Session</span>
+              <span class="text-primary">45 Mins</span>
+            </div>
+            <div class="text-muted" style="font-size: 0.78rem;">6:45 AM – 7:30 AM • Formula & theorem flashcards review before morning college lectures.</div>
+          </div>
+
+          <div class="list-group-item px-0 py-2 border-bottom">
+            <div class="d-flex justify-content-between fw-bold text-dark">
+              <span><i class="bi bi-brightness-high text-info me-1"></i> Afternoon Break</span>
+              <span class="text-primary">30 Mins</span>
+            </div>
+            <div class="text-muted" style="font-size: 0.78rem;">College Library / Lab • Organizing lecture notes & clarifying immediate doubts with professors.</div>
+          </div>
+
+          <div class="list-group-item px-0 py-2 border-bottom">
+            <div class="d-flex justify-content-between fw-bold text-dark">
+              <span><i class="bi bi-laptop text-primary me-1"></i> Evening Deep Work Block 1</span>
+              <span class="text-primary">90 Mins</span>
+            </div>
+            <div class="text-muted" style="font-size: 0.78rem;">5:30 PM – 7:00 PM • Solving previous years' question papers & numerical textbook problems.</div>
+          </div>
+
+          <div class="list-group-item px-0 py-2">
+            <div class="d-flex justify-content-between fw-bold text-dark">
+              <span><i class="bi bi-moon-stars text-secondary me-1"></i> Night Review Block 2</span>
+              <span class="text-primary">60 Mins</span>
+            </div>
+            <div class="text-muted" style="font-size: 0.78rem;">8:30 PM – 9:30 PM • Completing continuous evaluation assignments & lab writeups.</div>
+          </div>
+        </div>
+
+        <div class="alert alert-primary py-2 px-3 small mt-3 mb-0 rounded-3">
+          <i class="bi bi-info-circle-fill me-1"></i>
+          <strong>Tip:</strong> Study in 50-minute focused intervals followed by 10-minute rest breaks.
+        </div>
+      </div>
+
+      <!-- Quick Exam Preparation Checklist -->
+      <div class="custom-card p-4">
+        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-check2-square text-success me-1"></i> Exam Preparation Checklist</h6>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="chk1" checked>
+          <label class="form-check-label small" for="chk1">Maintain 75%+ attendance in all courses</label>
+        </div>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="chk2" checked>
+          <label class="form-check-label small" for="chk2">Complete all assignments 2 days before deadline</label>
+        </div>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="chk3">
+          <label class="form-check-label small" for="chk3">Solve 3 previous semester university papers</label>
+        </div>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="chk4">
+          <label class="form-check-label small" for="chk4">Review weak topics with subject teacher</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="chk5">
+          <label class="form-check-label small" for="chk5">Prepare one-page formula summary sheets</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+

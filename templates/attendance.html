@@ -1,0 +1,386 @@
+{% extends 'base.html' %}
+
+{% block title %}Attendance Tracking | AI Student Performance Prediction System{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+  <!-- Page Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+      <h3 class="fw-bold text-dark mb-1">Attendance Tracking</h3>
+      <p class="text-muted small mb-0">Monitor your classes, check 75% safety benchmarks, and manage subject records.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary-soft" data-bs-toggle="modal" data-bs-target="#addSubjectModal">
+        <i class="bi bi-plus-lg me-1"></i> Add New Subject
+      </button>
+    </div>
+  </div>
+
+  <!-- Critical/Warning Attendance Alert Banner -->
+  {% if low_attendance_warnings %}
+    <div class="alert alert-warning border-warning shadow-sm mb-4">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <i class="bi bi-exclamation-triangle-fill fs-4 text-warning"></i>
+        <h5 class="fw-bold mb-0 text-dark">Attention Required: Low Attendance Detected in {{ low_attendance_warnings|length }} Course(s)</h5>
+      </div>
+      <p class="small text-secondary mb-3">
+        University regulations require a minimum of <strong>75.0% attendance</strong> to be eligible for end-semester examinations. Below are your recovery targets:
+      </p>
+      <div class="row g-2">
+        {% for w in low_attendance_warnings %}
+          <div class="col-md-6">
+            <div class="p-2 bg-white rounded border border-warning d-flex justify-content-between align-items-center">
+              <div>
+                <strong>{{ w['code'] }}: {{ w['subject'] }}</strong>
+                <div class="small text-muted">Current: <span class="fw-bold text-danger">{{ w['current_pct'] }}%</span></div>
+              </div>
+              <div class="text-end">
+                <span class="badge bg-danger">Attend Next {{ w['needed'] }} Classes</span>
+                <div class="text-muted" style="font-size: 0.72rem;">consecutive to reach 75%</div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% else %}
+    <div class="alert alert-success border-success shadow-sm mb-4 d-flex align-items-center gap-2">
+      <i class="bi bi-check-circle-fill fs-5 text-success"></i>
+      <div>
+        <strong>All Safe!</strong> Your attendance across all subjects satisfies or exceeds the university requirement of 75%. Keep up the great consistency!
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Overview Stats -->
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-md-3">
+      <div class="metric-stat-card">
+        <div class="metric-icon-box metric-icon-blue"><i class="bi bi-book-half"></i></div>
+        <div>
+          <div class="metric-label">Tracked Subjects</div>
+          <div class="metric-value">{{ records|length }}</div>
+          <div class="small text-muted">Total enrolled</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+      <div class="metric-stat-card">
+        <div class="metric-icon-box metric-icon-green"><i class="bi bi-person-check-fill"></i></div>
+        <div>
+          <div class="metric-label">Attended Classes</div>
+          <div class="metric-value">{{ total_attended }}</div>
+          <div class="small text-muted">Lectures & labs</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+      <div class="metric-stat-card">
+        <div class="metric-icon-box metric-icon-yellow"><i class="bi bi-collection-fill"></i></div>
+        <div>
+          <div class="metric-label">Total Conducted</div>
+          <div class="metric-value">{{ total_classes }}</div>
+          <div class="small text-muted">Scheduled periods</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+      <div class="metric-stat-card">
+        {% if overall_pct >= 75 %}
+          <div class="metric-icon-box metric-icon-green"><i class="bi bi-shield-check"></i></div>
+        {% elif overall_pct >= 65 %}
+          <div class="metric-icon-box metric-icon-yellow"><i class="bi bi-shield-exclamation"></i></div>
+        {% else %}
+          <div class="metric-icon-box" style="background-color: #fee2e2; color: #dc2626;"><i class="bi bi-shield-slash"></i></div>
+        {% endif %}
+        <div>
+          <div class="metric-label">Cumulative Attendance</div>
+          <div class="metric-value">{{ overall_pct }}%</div>
+          <div class="small">
+            {% if overall_pct >= 75 %}
+              <span class="text-success fw-bold">Safe Tier (≥ 75%)</span>
+            {% elif overall_pct >= 65 %}
+              <span class="text-warning fw-bold">Warning Tier (65–74%)</span>
+            {% else %}
+              <span class="text-danger fw-bold">Critical Tier (&lt; 65%)</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Subject-Wise Attendance Visual Cards Grid -->
+  <div class="mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h5 class="fw-bold text-dark mb-0"><i class="bi bi-grid-3x3-gap-fill text-primary me-2"></i>Subject-Wise Attendance Cards</h5>
+        <small class="text-muted">Tap "+ Present" or "+ Absent" to instantly record your daily lecture attendance</small>
+      </div>
+      <div class="d-flex gap-2">
+        <span class="badge badge-attendance-green">🟢 Safe (≥75%)</span>
+        <span class="badge badge-attendance-yellow">🟡 Warning (65–74%)</span>
+        <span class="badge badge-attendance-red">🔴 Critical (&lt;65%)</span>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      {% for r in records %}
+        <div class="col-md-6 col-xl-4">
+          <div class="custom-card p-3 h-100 border-2 {% if r['badge'] == 'success' %}border-success{% elif r['badge'] == 'warning' %}border-warning{% else %}border-danger{% endif %} shadow-sm">
+            
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <span class="badge bg-light text-dark border fw-bold">{{ r['subject_code'] }}</span>
+              {% if r['badge'] == 'success' %}
+                <span class="badge badge-attendance-green"><i class="bi bi-check-circle-fill me-1"></i>Safe (≥75%)</span>
+              {% elif r['badge'] == 'warning' %}
+                <span class="badge badge-attendance-yellow"><i class="bi bi-exclamation-triangle-fill me-1"></i>Warning (65-74%)</span>
+              {% else %}
+                <span class="badge badge-attendance-red"><i class="bi bi-x-octagon-fill me-1"></i>Critical (&lt;65%)</span>
+              {% endif %}
+            </div>
+
+            <h6 class="fw-bold text-dark mb-1 text-truncate" title="{{ r['subject_name'] }}">{{ r['subject_name'] }}</h6>
+
+            <div class="d-flex align-items-baseline gap-2 my-2">
+              <span class="display-6 fw-bold text-dark">{{ r['percentage'] }}%</span>
+              <span class="text-muted small">({{ r['attended'] }} of {{ r['total'] }} classes)</span>
+            </div>
+
+            <div class="progress mb-3" style="height: 6px;">
+              <div class="progress-bar bg-{{ r['badge'] }}" style="width: {{ r['percentage'] }}%;"></div>
+            </div>
+
+            <!-- Subject-specific actionable insight -->
+            <div class="p-2 rounded mb-3 small {% if r['badge'] == 'success' %}bg-success-subtle text-success border border-success-subtle{% elif r['badge'] == 'warning' %}bg-warning-subtle text-warning-emphasis border border-warning-subtle{% else %}bg-danger-subtle text-danger border border-danger-subtle{% endif %}">
+              {% if r['percentage'] < 75.0 %}
+                <i class="bi bi-exclamation-circle-fill me-1"></i>
+                Must attend next <strong>{{ r['classes_needed'] }} classes</strong> to reach 75%.
+              {% else %}
+                <i class="bi bi-check-circle-fill me-1"></i>
+                You can safely miss up to <strong>{{ r['classes_can_miss'] }} classes</strong> and stay ≥75%.
+              {% endif %}
+            </div>
+
+            <!-- 1-Click Quick Actions -->
+            <div class="d-flex gap-2">
+              <form action="{{ url_for('quick_log_attendance', record_id=r['id'], action='present') }}" method="POST" class="flex-fill">
+                <button type="submit" class="btn btn-sm btn-outline-success w-100 fw-bold" title="Log one class attended">
+                  <i class="bi bi-plus-circle me-1"></i> + Present
+                </button>
+              </form>
+              <form action="{{ url_for('quick_log_attendance', record_id=r['id'], action='absent') }}" method="POST" class="flex-fill">
+                <button type="submit" class="btn btn-sm btn-outline-danger w-100 fw-bold" title="Log one class missed">
+                  <i class="bi bi-dash-circle me-1"></i> + Absent
+                </button>
+              </form>
+              <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editModal{{ r['id'] }}" title="Edit numbers">
+                <i class="bi bi-pencil"></i>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      {% else %}
+        <div class="col-12 text-center py-4 text-muted">
+          No subjects logged yet. Click "Add New Subject" to begin tracking.
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Subject-wise Attendance Table & Chart Row -->
+  <div class="row g-4 mb-4">
+    
+    <!-- Table -->
+    <div class="col-lg-8">
+      <div class="custom-card">
+        <div class="card-header-clean">
+          <div>
+            <h5 class="text-dark">Subject-Wise Attendance Breakdown</h5>
+            <small class="text-muted">Detailed view with color-coded safety indicators</small>
+          </div>
+          <div class="d-flex gap-2">
+            <span class="badge badge-attendance-green">≥75% Green</span>
+            <span class="badge badge-attendance-yellow">65-74% Yellow</span>
+            <span class="badge badge-attendance-red">&lt;65% Red</span>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table custom-table table-hover align-middle">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Subject Name</th>
+                <th>Attended / Total</th>
+                <th>Percentage</th>
+                <th>Status Indicator</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in records %}
+                <tr>
+                  <td><span class="badge bg-light text-dark border">{{ r['subject_code'] }}</span></td>
+                  <td><strong>{{ r['subject_name'] }}</strong></td>
+                  <td>{{ r['attended'] }} / {{ r['total'] }}</td>
+                  <td>
+                    <div class="fw-bold fs-6">{{ r['percentage'] }}%</div>
+                    <div class="progress" style="height: 5px; width: 80px;">
+                      <div class="progress-bar bg-{{ r['badge'] }}" style="width: {{ r['percentage'] }}%;"></div>
+                    </div>
+                  </td>
+                  <td>
+                    {% if r['badge'] == 'success' %}
+                      <span class="badge badge-status badge-attendance-green">
+                        <i class="bi bi-check-circle-fill"></i> Safe (≥75%)
+                      </span>
+                    {% elif r['badge'] == 'warning' %}
+                      <span class="badge badge-status badge-attendance-yellow">
+                        <i class="bi bi-exclamation-triangle-fill"></i> Warning (65-74%)
+                      </span>
+                    {% else %}
+                      <span class="badge badge-status badge-attendance-red">
+                        <i class="bi bi-x-octagon-fill"></i> Critical (&lt;65%)
+                      </span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end">
+                    <button class="btn btn-sm btn-outline-secondary me-1" data-bs-toggle="modal" data-bs-target="#editModal{{ r['id'] }}" title="Update Numbers">
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                    <form action="{{ url_for('delete_attendance', record_id=r['id']) }}" method="POST" class="d-inline" onsubmit="return confirm('Remove {{ r['subject_name'] }} from tracking?');">
+                      <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+
+                <!-- Edit Modal for each row -->
+                <div class="modal fade" id="editModal{{ r['id'] }}" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog">
+                    <div class="modal-content">
+                      <form action="{{ url_for('edit_attendance', record_id=r['id']) }}" method="POST">
+                        <div class="modal-header">
+                          <h5 class="modal-title fw-bold">Update: {{ r['subject_name'] }}</h5>
+                          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                          <div class="mb-3">
+                            <label class="form-label fw-semibold small">Attended Classes</label>
+                            <input type="number" class="form-control" name="attended_classes" value="{{ r['attended'] }}" min="0" required>
+                          </div>
+                          <div class="mb-3">
+                            <label class="form-label fw-semibold small">Total Classes Conducted</label>
+                            <input type="number" class="form-control" name="total_classes" value="{{ r['total'] }}" min="1" required>
+                          </div>
+                        </div>
+                        <div class="modal-footer">
+                          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                          <button type="submit" class="btn btn-primary-soft btn-sm">Save Changes</button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+
+              {% else %}
+                <tr>
+                  <td colspan="6" class="text-center py-4 text-muted">
+                    No subjects currently tracked. Click "Add New Subject" to begin.
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attendance Chart & Quick Target Simulator -->
+    <div class="col-lg-4">
+      <!-- Chart -->
+      <div class="custom-card mb-4">
+        <div class="card-header-clean">
+          <h5 class="text-dark">Attendance Visualizer</h5>
+        </div>
+        <div class="p-3" style="height: 220px;">
+          <canvas id="attendanceSubjectBarChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Simulator Tool -->
+      <div class="custom-card p-3">
+        <h6 class="fw-bold text-dark mb-2"><i class="bi bi-calculator me-1 text-primary"></i> Attendance Target Calculator</h6>
+        <p class="small text-muted mb-3">Simulate how many classes you must attend or can safely miss:</p>
+        
+        <div class="row g-2 mb-2">
+          <div class="col-6">
+            <label class="form-label small text-muted mb-1">Attended Classes</label>
+            <input type="number" id="simAttended" class="form-control form-control-sm" value="{{ total_attended }}">
+          </div>
+          <div class="col-6">
+            <label class="form-label small text-muted mb-1">Total Classes</label>
+            <input type="number" id="simTotal" class="form-control form-control-sm" value="{{ total_classes }}">
+          </div>
+          <div class="col-12">
+            <label class="form-label small text-muted mb-1">Target Percentage (%)</label>
+            <input type="number" id="simTarget" class="form-control form-control-sm" value="75">
+          </div>
+        </div>
+
+        <button type="button" id="btnCalculateTargetAttendance" class="btn btn-primary-soft btn-sm w-100 mb-2">
+          Calculate Target
+        </button>
+
+        <div id="simResult"></div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Add Subject Modal -->
+<div class="modal fade" id="addSubjectModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form action="{{ url_for('add_attendance') }}" method="POST">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold">Add Subject for Attendance Tracking</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Subject Code</label>
+            <input type="text" class="form-control" name="subject_code" placeholder="e.g. CS601" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Subject Name</label>
+            <input type="text" class="form-control" name="subject_name" placeholder="e.g. Operating Systems" required>
+          </div>
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label fw-semibold small">Attended Classes</label>
+              <input type="number" class="form-control" name="attended_classes" value="0" min="0" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold small">Total Classes</label>
+              <input type="number" class="form-control" name="total_classes" value="0" min="0" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary-soft btn-sm">Add Subject</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

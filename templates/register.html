@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}Student Registration | AI Student Performance Prediction System{% endblock %}
+
+{% block public_content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <div class="custom-card p-4 p-sm-5 shadow-sm">
+        
+        <div class="text-center mb-4">
+          <div class="d-inline-flex p-3 rounded-circle bg-light mb-2">
+            <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="Logo" width="48" height="48">
+          </div>
+          <h3 class="fw-bold text-dark">Student Registration</h3>
+          <p class="text-muted small">Register to monitor attendance, track marks & predict final performance</p>
+        </div>
+
+        <form action="{{ url_for('register') }}" method="POST">
+          <div class="row g-3">
+            
+            <div class="col-12">
+              <label for="name" class="form-label fw-semibold small text-muted">Full Name</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-person"></i></span>
+                <input type="text" class="form-control border-start-0" id="name" name="name" placeholder="e.g. Alex Johnson" required>
+              </div>
+            </div>
+
+            <div class="col-sm-6">
+              <label for="student_id" class="form-label fw-semibold small text-muted">Student ID / Roll No</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-card-text"></i></span>
+                <input type="text" class="form-control border-start-0" id="student_id" name="student_id" placeholder="e.g. CS2026-088" required>
+              </div>
+            </div>
+
+            <div class="col-sm-6">
+              <label for="semester" class="form-label fw-semibold small text-muted">Current Semester</label>
+              <select class="form-select" id="semester" name="semester">
+                <option value="1">Semester 1</option>
+                <option value="2">Semester 2</option>
+                <option value="3">Semester 3</option>
+                <option value="4">Semester 4</option>
+                <option value="5">Semester 5</option>
+                <option value="6" selected>Semester 6</option>
+                <option value="7">Semester 7</option>
+                <option value="8">Semester 8</option>
+              </select>
+            </div>
+
+            <div class="col-12">
+              <label for="department" class="form-label fw-semibold small text-muted">Department / Branch</label>
+              <select class="form-select" id="department" name="department">
+                <option value="Computer Science & Engineering" selected>Computer Science & Engineering</option>
+                <option value="Information Technology">Information Technology</option>
+                <option value="Artificial Intelligence & Data Science">Artificial Intelligence & Data Science</option>
+                <option value="Electronics & Communication">Electronics & Communication</option>
+                <option value="Electrical & Electronics">Electrical & Electronics</option>
+                <option value="Mechanical Engineering">Mechanical Engineering</option>
+                <option value="Civil Engineering">Civil Engineering</option>
+                <option value="Management Studies / Commerce">Management Studies / Commerce</option>
+              </select>
+            </div>
+
+            <div class="col-12">
+              <label for="email" class="form-label fw-semibold small text-muted">College Email Address</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-envelope"></i></span>
+                <input type="email" class="form-control border-start-0" id="email" name="email" placeholder="student@college.edu" required>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <label for="password" class="form-label fw-semibold small text-muted">Create Password</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-lock"></i></span>
+                <input type="password" class="form-control border-start-0" id="password" name="password" minlength="6" placeholder="At least 6 characters" required>
+              </div>
+            </div>
+
+            <div class="col-12 mt-4">
+              <button type="submit" class="btn btn-primary-soft w-100 py-2 fw-bold">
+                <i class="bi bi-person-check-fill me-1"></i> Register Student Account
+              </button>
+            </div>
+
+          </div>
+        </form>
+
+        <div class="text-center pt-3 mt-3 border-top">
+          <span class="text-muted small">Already have an account? </span>
+          <a href="{{ url_for('login') }}" class="small fw-bold text-primary">Sign In here</a>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+
+{% block title %}Internal Assessment Marks | AI Student Performance Prediction System{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+  <!-- Page Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+      <h3 class="fw-bold text-dark mb-1">Internal Assessment Marks</h3>
+      <p class="text-muted small mb-0">Record your continuous evaluation marks (IA1, IA2, Assignments) and previous exam history.</p>
+    </div>
+    <div>
+      <button class="btn btn-primary-soft" data-bs-toggle="modal" data-bs-target="#addMarksModal">
+        <i class="bi bi-plus-lg me-1"></i> Add Subject Marks
+      </button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-md-4">
+      <div class="metric-stat-card">
+        <div class="metric-icon-box metric-icon-blue"><i class="bi bi-book"></i></div>
+        <div>
+          <div class="metric-label">Recorded Courses</div>
+          <div class="metric-value">{{ count }}</div>
+          <div class="small text-muted">Active evaluations</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-md-4">
+      <div class="metric-stat-card">
+        <div class="metric-icon-box metric-icon-green"><i class="bi bi-percent"></i></div>
+        <div>
+          <div class="metric-label">Average Internal Score</div>
+          <div class="metric-value">{{ avg_pct }}%</div>
+          <div class="small text-muted">Scaled across all subjects</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-md-4">
+      <div class="metric-stat-card">
+        <div class="metric-icon-box metric-icon-purple"><i class="bi bi-award-fill"></i></div>
+        <div>
+          <div class="metric-label">Grading Tier</div>
+          <div class="metric-value fs-4">
+            {% if avg_pct >= 85 %}
+              <span class="badge badge-cat-excellent">Distinction (≥85%)</span>
+            {% elif avg_pct >= 70 %}
+              <span class="badge badge-cat-good">First Class (70-84%)</span>
+            {% elif avg_pct >= 50 %}
+              <span class="badge badge-cat-average">Pass Class (50-69%)</span>
+            {% else %}
+              <span class="badge badge-cat-needs-improvement">&lt;50% Remedial</span>
+            {% endif %}
+          </div>
+          <div class="small text-muted">Internal benchmark</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Internal Marks Table -->
+  <div class="custom-card mb-4">
+    <div class="card-header-clean">
+      <div>
+        <h5 class="text-dark">Subject-Wise Assessment Matrix</h5>
+        <small class="text-muted">IA-1 (out of 25), IA-2 (out of 25), Assignment (out of 25) & Previous Semester Exam (out of 100)</small>
+      </div>
+      <span class="badge bg-light text-dark border">Weightage: Continuous (75) + Theory (100)</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table custom-table table-hover align-middle">
+        <thead>
+          <tr>
+            <th>Subject Name</th>
+            <th class="text-center">IA 1 (Max 25)</th>
+            <th class="text-center">IA 2 (Max 25)</th>
+            <th class="text-center">Assignment (Max 25)</th>
+            <th class="text-center">Total Internal (Max 75)</th>
+            <th class="text-center">Scaled %</th>
+            <th class="text-center">Prev Exam (100)</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in records %}
+            <tr>
+              <td>
+                <div class="fw-bold text-dark">{{ r['subject_name'] }}</div>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-light text-dark border px-2 py-1">{{ r['ia1'] }}</span>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-light text-dark border px-2 py-1">{{ r['ia2'] }}</span>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-light text-dark border px-2 py-1">{{ r['assignment_marks'] }}</span>
+              </td>
+              <td class="text-center">
+                <strong>{{ r['total_internal'] }}</strong> <span class="text-muted small">/ 75</span>
+              </td>
+              <td class="text-center">
+                <div class="fw-bold">{{ r['scaled_pct'] }}%</div>
+                <div class="progress mx-auto" style="height: 4px; width: 60px;">
+                  <div class="progress-bar {% if r['scaled_pct'] >= 75 %}bg-success{% elif r['scaled_pct'] >= 60 %}bg-primary{% else %}bg-warning{% endif %}" style="width: {{ r['scaled_pct'] }}%;"></div>
+                </div>
+              </td>
+              <td class="text-center">
+                <span class="fw-semibold text-secondary">{{ r['previous_exam_marks'] }}</span> / 100
+              </td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-outline-secondary me-1" data-bs-toggle="modal" data-bs-target="#editMarksModal{{ r['id'] }}" title="Edit Marks">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <form action="{{ url_for('delete_internal', record_id=r['id']) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete marks for {{ r['subject_name'] }}?');">
+                  <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+
+            <!-- Edit Modal for each row -->
+            <div class="modal fade" id="editMarksModal{{ r['id'] }}" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <form action="{{ url_for('edit_internal', record_id=r['id']) }}" method="POST">
+                    <div class="modal-header">
+                      <h5 class="modal-title fw-bold">Edit Marks: {{ r['subject_name'] }}</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                      <div class="row g-3">
+                        <div class="col-6">
+                          <label class="form-label fw-semibold small">IA 1 Marks (0–25)</label>
+                          <input type="number" step="0.5" class="form-control" name="ia1" value="{{ r['ia1'] }}" min="0" max="25" required>
+                        </div>
+                        <div class="col-6">
+                          <label class="form-label fw-semibold small">IA 2 Marks (0–25)</label>
+                          <input type="number" step="0.5" class="form-control" name="ia2" value="{{ r['ia2'] }}" min="0" max="25" required>
+                        </div>
+                        <div class="col-6">
+                          <label class="form-label fw-semibold small">Assignment (0–25)</label>
+                          <input type="number" step="0.5" class="form-control" name="assignment_marks" value="{{ r['assignment_marks'] }}" min="0" max="25" required>
+                        </div>
+                        <div class="col-6">
+                          <label class="form-label fw-semibold small">Previous Exam (0–100)</label>
+                          <input type="number" step="0.5" class="form-control" name="previous_exam_marks" value="{{ r['previous_exam_marks'] }}" min="0" max="100" required>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                      <button type="submit" class="btn btn-primary-soft btn-sm">Update Marks</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+          {% else %}
+            <tr>
+              <td colspan="8" class="text-center py-4 text-muted">
+                No internal marks added yet. Click "Add Subject Marks" or load sample coursework to get started.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Add Marks Modal -->
+<div class="modal fade" id="addMarksModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form action="{{ url_for('add_internal') }}" method="POST">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold">Add Subject Assessment Marks</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Subject Name</label>
+            <input type="text" class="form-control" name="subject_name" placeholder="e.g. Database Management Systems" required>
+          </div>
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label fw-semibold small">IA-1 Marks (0–25)</label>
+              <input type="number" step="0.5" class="form-control" name="ia1" placeholder="e.g. 21.5" min="0" max="25" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold small">IA-2 Marks (0–25)</label>
+              <input type="number" step="0.5" class="form-control" name="ia2" placeholder="e.g. 22.0" min="0" max="25" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold small">Assignment (0–25)</label>
+              <input type="number" step="0.5" class="form-control" name="assignment_marks" placeholder="e.g. 23.0" min="0" max="25" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold small">Previous Exam (0–100)</label>
+              <input type="number" step="0.5" class="form-control" name="previous_exam_marks" placeholder="e.g. 78.0" min="0" max="100" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary-soft btn-sm">Save Internal Marks</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

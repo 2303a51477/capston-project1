@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}Student Login | AI Student Performance Prediction System{% endblock %}
+
+{% block public_content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-7 col-lg-5">
+      <div class="custom-card p-4 p-sm-5 shadow-sm">
+        
+        <div class="text-center mb-4">
+          <div class="d-inline-flex p-3 rounded-circle bg-light mb-2">
+            <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="Logo" width="48" height="48">
+          </div>
+          <h3 class="fw-bold text-dark">Student Sign In</h3>
+          <p class="text-muted small">Access your academic records and AI predictions</p>
+        </div>
+
+        <!-- Quick Demo Credentials Box -->
+        <div class="alert alert-info py-2 px-3 small d-flex justify-content-between align-items-center mb-4 rounded-3 border-info">
+          <div>
+            <i class="bi bi-info-circle-fill me-1 text-primary"></i>
+            <span><strong>Demo Student:</strong> CS2026-042 / password123</span>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 fw-semibold" id="btnFillDemoLogin">
+            Fill
+          </button>
+        </div>
+
+        <form action="{{ url_for('login') }}" method="POST">
+          <div class="mb-3">
+            <label for="identifier" class="form-label fw-semibold small text-muted">Student ID or College Email</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-person"></i></span>
+              <input type="text" class="form-control border-start-0" id="identifier" name="identifier" placeholder="e.g. CS2026-042 or rahul.student@college.edu" required>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <label for="password" class="form-label fw-semibold small text-muted mb-0">Password</label>
+            </div>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-lock"></i></span>
+              <input type="password" class="form-control border-start-0" id="password" name="password" placeholder="Enter your password" required>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary-soft w-100 py-2 fw-bold mb-3">
+            <i class="bi bi-box-arrow-in-right me-1"></i> Sign In to Dashboard
+          </button>
+        </form>
+
+        <div class="text-center pt-3 border-top">
+          <span class="text-muted small">New student? </span>
+          <a href="{{ url_for('register') }}" class="small fw-bold text-primary">Create an Account</a>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.getElementById('btnFillDemoLogin')?.addEventListener('click', function() {
+    document.getElementById('identifier').value = 'rahul.student@college.edu';
+    document.getElementById('password').value = 'password123';
+  });
+</script>
+{% endblock %}
+
