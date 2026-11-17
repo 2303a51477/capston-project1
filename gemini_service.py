@@ -32,17 +32,21 @@ load_dotenv(override=True)
 
 # Candidate cloud models in order of preference
 CANDIDATE_MODELS = [
-    os.environ.get("GEMINI_MODEL", "gemini-1.5-flash"),
-    "gemini-1.5-flash",
-    "gemini-2.0-flash",
-    "gemini-1.5-pro",
-    "gemini-pro"
+    os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite"),
+    "gemini-3.5-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-flash-latest"
 ]
 
 
 def get_api_key() -> Optional[str]:
     """Retrieves Gemini API key from environment, reloading .env on each check."""
-    load_dotenv(override=True)
+    env_file = os.path.join(os.path.dirname(__file__), '.env')
+    if os.path.exists(env_file):
+        load_dotenv(dotenv_path=env_file, override=True)
+    else:
+        load_dotenv(override=True)
     key = os.environ.get("GEMINI_API_KEY", "").strip()
     if not key:
         key = os.environ.get("GOOGLE_API_KEY", "").strip()
@@ -739,7 +743,7 @@ def call_gemini_api(
                 }
             }
 
-            resp = requests.post(url, json=payload, timeout=20)
+            resp = requests.post(url, json=payload, timeout=30)
             if resp.status_code == 200:
                 data = resp.json()
                 candidates = data.get("candidates", [])
