@@ -17,6 +17,7 @@
   
   <!-- Custom Application Styling -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/chatbot.css') }}">
   {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -48,6 +49,11 @@
         </a>
 
         <div class="nav-category mt-3">AI & Analytics</div>
+        <a href="{{ url_for('chatbot_view') }}" class="nav-link {% if request.endpoint == 'chatbot_view' %}active{% endif %}">
+          <i class="bi bi-robot text-primary"></i>
+          <span>AI Bot Assistant</span>
+          <span class="badge bg-primary-subtle text-primary rounded-pill ms-auto px-2 py-0" style="font-size: 0.65rem;">NEW</span>
+        </a>
         <a href="{{ url_for('predict') }}" class="nav-link {% if request.endpoint == 'predict' %}active{% endif %}">
           <i class="bi bi-cpu-fill"></i>
           <span>AI Prediction</span>
@@ -96,7 +102,10 @@
           </div>
         </div>
 
-        <div class="d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center gap-2">
+          <a href="{{ url_for('chatbot_view') }}" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1 shadow-sm" style="background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%); border: none;">
+            <i class="bi bi-stars"></i> <span class="d-none d-sm-inline">AI Assistant</span>
+          </a>
           <a href="{{ url_for('download_report_pdf') }}" class="btn btn-sm btn-outline-soft d-none d-sm-inline-flex align-items-center gap-1">
             <i class="bi bi-file-earmark-pdf"></i> Download PDF
           </a>
@@ -134,6 +143,14 @@
 
     </div>
   </div>
+
+  <!-- Floating Quick AI Copilot Launcher across student portal -->
+  {% if request.endpoint != 'chatbot_view' %}
+    <a href="{{ url_for('chatbot_view') }}" class="floating-copilot-trigger" title="Open AI Bot Assistant">
+      <i class="bi bi-stars fs-5"></i>
+      <span>Ask AI Copilot</span>
+    </a>
+  {% endif %}
 
 {% else %}
   <!-- Public Layout (Landing, Login, Register) -->

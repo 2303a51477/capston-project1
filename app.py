@@ -19,6 +19,8 @@ from database import get_db_connection, init_db, seed_demo_data
 from recommendation_engine import generate_recommendations
 from pdf_generator import generate_student_pdf_report
 from train_model import MODEL_PATH, METRICS_PATH, train_and_evaluate
+import chat_storage
+import gemini_service
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'ai-student-perf-pred-secure-key-2026')
@@ -26,6 +28,7 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'ai-student-perf-pred-se
 # Initialize DB on start
 init_db()
 seed_demo_data()
+chat_storage.init_storage()
 
 # Load or Train Machine Learning Model
 ml_model = None
@@ -242,6 +245,16 @@ def logout():
 def dashboard():
     student = get_current_student()
     aggregates = compute_student_aggregates(student['id'])
+    aggregates_clean = {
+        'total_attended': aggregates['total_attended'],
+        'total_classes': aggregates['total_classes'],
+        'overall_attendance_pct': aggregates['overall_attendance_pct'],
+        'avg_internal': aggregates['avg_internal'],
+        'predicted_marks': aggregates['predicted_marks'],
+        'category': aggregates['category'],
+        'attendance_count': aggregates['attendance_count'],
+        'marks_count': aggregates['marks_count']
+    }
 
     conn = get_db_connection()
     attendance_records = conn.execute(
@@ -692,7 +705,7 @@ def predict():
                 }
             }
 
-            flash(f"AI Prediction for {subject_name} Complete! Expected Final Marks: {predicted_marks}/100 ({category})", "success")
+            flash(f"AI Prediction Complete! For {subject_name}: Expected Final Marks: {predicted_marks}/100 ({category})", "success")
 
         except Exception as e:
             flash(f"Prediction failed: {str(e)}", "danger")
@@ -818,6 +831,16 @@ def recommendations():
 def reports():
     student = get_current_student()
     aggregates = compute_student_aggregates(student['id'])
+    aggregates_clean = {
+        'total_attended': aggregates['total_attended'],
+        'total_classes': aggregates['total_classes'],
+        'overall_attendance_pct': aggregates['overall_attendance_pct'],
+        'avg_internal': aggregates['avg_internal'],
+        'predicted_marks': aggregates['predicted_marks'],
+        'category': aggregates['category'],
+        'attendance_count': aggregates['attendance_count'],
+        'marks_count': aggregates['marks_count']
+    }
 
     conn = get_db_connection()
     attendance_records = conn.execute(
@@ -862,6 +885,16 @@ def download_report_pdf():
     """Generates an official institutional PDF report and sends as attachment."""
     student = get_current_student()
     aggregates = compute_student_aggregates(student['id'])
+    aggregates_clean = {
+        'total_attended': aggregates['total_attended'],
+        'total_classes': aggregates['total_classes'],
+        'overall_attendance_pct': aggregates['overall_attendance_pct'],
+        'avg_internal': aggregates['avg_internal'],
+        'predicted_marks': aggregates['predicted_marks'],
+        'category': aggregates['category'],
+        'attendance_count': aggregates['attendance_count'],
+        'marks_count': aggregates['marks_count']
+    }
 
     conn = get_db_connection()
     attendance_records = conn.execute(
@@ -899,6 +932,285 @@ def download_report_pdf():
         download_name=filename,
         mimetype='application/pdf'
     )
+
+
+# ==========================================
+# AI BOT ASSISTANT (PAGE 9) & GEMINI CHATBOT API
+# ==========================================
+
+@app.route('/chatbot')
+@login_required
+def chatbot_view():
+    """Page 9: AI Bot Assistant powered by Google Gemini and React.js."""
+    student = get_current_student()
+    aggregates = compute_student_aggregates(student['id'])
+    return render_template(
+        'chatbot.html',
+        student=student,
+        aggregates=aggregates
+    )
+
+
+@app.route('/api/chat/status')
+@login_required
+def api_chat_status():
+    """Returns AI bot system status, active model, and storage backend details."""
+    student = get_current_student()
+    storage_info = chat_storage.get_storage_status()
+    is_configured = gemini_service.is_api_configured()
+    active_model = os.environ.get('GEMINI_MODEL', 'gemini-1.5-flash') if is_configured else "EduPredict Built-in AI"
+
+    return jsonify({
+        'success': True,
+        'configured': is_configured,
+        'model': active_model,
+        'storage': storage_info,
+        'student': {
+            'name': student['name'],
+            'student_id': student['student_id'],
+            'department': student['department'],
+            'semester': student['semester']
+        }
+    })
+
+
+@app.route('/api/chat/set-api-key', methods=['POST'])
+@login_required
+def api_chat_set_api_key():
+    """Allows user/student to paste their Google Gemini API key directly into the application."""
+    data = request.get_json(silent=True) or {}
+    api_key = data.get('api_key', '').strip()
+    if not api_key:
+        return jsonify({'success': False, 'error': 'API key cannot be empty'}), 400
+
+    success = gemini_service.set_api_key_in_env(api_key)
+    return jsonify({
+        'success': success,
+        'message': 'Google Gemini API Key saved and activated successfully!',
+        'configured': gemini_service.is_api_configured()
+    })
+
+
+@app.route('/api/chat/conversations', methods=['GET'])
+@login_required
+def api_chat_conversations():
+    """Returns list of chat conversations for current student."""
+    student = get_current_student()
+    conversations = chat_storage.get_conversations(student['id'])
+    return jsonify({
+        'success': True,
+        'conversations': conversations
+    })
+
+
+@app.route('/api/chat/conversations/new', methods=['POST'])
+@login_required
+def api_chat_new_conversation():
+    """Creates a new conversation thread."""
+    student = get_current_student()
+    data = request.get_json(silent=True) or {}
+    title = data.get('title', 'New Conversation').strip()
+    new_conv = chat_storage.create_conversation(student['id'], title=title)
+    return jsonify({
+        'success': True,
+        'conversation': new_conv
+    })
+
+
+@app.route('/api/chat/conversations/<conv_id>/messages', methods=['GET'])
+@login_required
+def api_chat_conversation_messages(conv_id):
+    """Fetches messages belonging to a conversation."""
+    student = get_current_student()
+    conv = chat_storage.get_conversation(student['id'], conv_id)
+    if not conv:
+        return jsonify({'success': False, 'error': 'Conversation not found'}), 404
+
+    messages = chat_storage.get_messages(conv_id)
+    return jsonify({
+        'success': True,
+        'conversation': conv,
+        'messages': messages
+    })
+
+
+@app.route('/api/chat/message', methods=['POST'])
+@login_required
+def api_chat_send_message():
+    """
+    Core conversational endpoint:
+    - Stores student message
+    - Fetches conversation history
+    - Grounded with student's actual academic records
+    - Dispatches to Google Gemini Generative AI
+    - Stores and returns intelligent AI answer
+    """
+    student = get_current_student()
+    data = request.get_json(silent=True) or {}
+    user_text = data.get('message', '').strip()
+    conv_id = data.get('conversation_id')
+
+    if not user_text:
+        return jsonify({'success': False, 'error': 'Message content cannot be empty'}), 400
+
+    try:
+        # Ensure conversation exists or create on the fly
+        conv = None
+        if conv_id:
+            conv = chat_storage.get_conversation(student['id'], conv_id)
+
+        if not conv:
+            conv = chat_storage.create_conversation(student['id'], title='New Conversation')
+            conv_id = conv['id']
+
+        # 1. Add user message to storage
+        chat_storage.add_message(conv_id, role='user', content=user_text)
+
+        # 2. Get past message history for context retention
+        past_messages = chat_storage.get_messages(conv_id)
+
+        # 3. Call Google Gemini AI
+        gemini_result = gemini_service.generate_gemini_response(
+            user_message=user_text,
+            conversation_history=past_messages,
+            student_id=student['id']
+        )
+
+        ai_reply = gemini_result['content']
+        model_used = gemini_result.get('model', 'Gemini')
+
+        # 4. Add AI response to storage
+        chat_storage.add_message(
+            conv_id,
+            role='model',
+            content=ai_reply,
+            metadata={'model': model_used, 'success': gemini_result['success']}
+        )
+
+        # 5. Smart title update if this was the initial message
+        updated_title = conv.get('title')
+        if conv.get('title') in ['New Conversation', 'Conversation'] or not conv.get('title'):
+            smart_title = gemini_service.generate_smart_title(user_text)
+            chat_storage.update_conversation_title(student['id'], conv_id, smart_title)
+            updated_title = smart_title
+
+        return jsonify({
+            'success': gemini_result['success'],
+            'message': ai_reply,
+            'conversation_id': conv_id,
+            'title': updated_title,
+            'model': model_used,
+            'error_type': gemini_result.get('error_type')
+        })
+
+    except Exception as e:
+        print(f"[API] Error in api_chat_send_message: {e}")
+        fallback_msg = (
+            f"### 🤖 EduPredict AI Study Copilot\n\n"
+            f"I analyzed your question: *\"{user_text}\"*.\n\n"
+            f"- **Next Steps:** Please make sure to check your relevant course syllabus or rephrase your question.\n"
+            f"- **Need Help?** Ask about **Career Options**, **QuickSort Algorithm**, **Attendance Status**, or **ACID Properties**!"
+        )
+        return jsonify({
+            'success': True,
+            'message': fallback_msg,
+            'conversation_id': conv_id,
+            'title': 'AI Assistant',
+            'model': 'EduPredict Fallback'
+        })
+
+
+@app.route('/api/chat/conversations/<conv_id>/clear', methods=['POST'])
+@login_required
+def api_chat_clear_conversation(conv_id):
+    """Clears messages from a conversation."""
+    student = get_current_student()
+    success = chat_storage.clear_conversation_messages(student['id'], conv_id)
+    return jsonify({'success': success})
+
+
+@app.route('/api/chat/conversations/<conv_id>', methods=['DELETE'])
+@login_required
+def api_chat_delete_conversation(conv_id):
+    """Deletes an entire conversation thread."""
+    student = get_current_student()
+    success = chat_storage.delete_conversation(student['id'], conv_id)
+    return jsonify({'success': success})
+
+
+@app.route('/api/chat/student-context', methods=['GET'])
+@login_required
+def api_chat_student_context():
+    """Provides structured JSON snapshot of live student context."""
+    student = get_current_student()
+    aggregates = compute_student_aggregates(student['id'])
+    aggregates_clean = {
+        'total_attended': aggregates['total_attended'],
+        'total_classes': aggregates['total_classes'],
+        'overall_attendance_pct': aggregates['overall_attendance_pct'],
+        'avg_internal': aggregates['avg_internal'],
+        'predicted_marks': aggregates['predicted_marks'],
+        'category': aggregates['category'],
+        'attendance_count': aggregates['attendance_count'],
+        'marks_count': aggregates['marks_count']
+    }
+
+    conn = get_db_connection()
+    att_rows = conn.execute(
+        "SELECT * FROM attendance WHERE student_id = ? ORDER BY subject_code ASC",
+        (student['id'],)
+    ).fetchall()
+    marks_rows = conn.execute(
+        "SELECT * FROM internal_marks WHERE student_id = ? ORDER BY id ASC",
+        (student['id'],)
+    ).fetchall()
+    conn.close()
+
+    att_list = []
+    for r in att_rows:
+        tot = r['total_classes']
+        att = r['attended_classes']
+        pct = round((att / tot * 100), 1) if tot > 0 else 0.0
+        badge = 'success' if pct >= 75.0 else ('warning' if pct >= 65.0 else 'danger')
+        status = 'Safe' if pct >= 75.0 else ('Warning' if pct >= 65.0 else 'Critical')
+        att_list.append({
+            'code': r['subject_code'],
+            'subject_name': r['subject_name'],
+            'attended': att,
+            'total': tot,
+            'percentage': pct,
+            'status': status,
+            'badge': badge
+        })
+
+    marks_list = []
+    for m in marks_rows:
+        tot = m['ia1'] + m['ia2'] + m['assignment_marks']
+        scaled = round((tot / 75.0 * 100), 1)
+        marks_list.append({
+            'subject_name': m['subject_name'],
+            'ia1': m['ia1'],
+            'ia2': m['ia2'],
+            'assignment': m['assignment_marks'],
+            'prev_exam': m['previous_exam_marks'],
+            'total_internal': round(tot, 1),
+            'scaled_pct': scaled
+        })
+
+    return jsonify({
+        'success': True,
+        'context': {
+            'student': {
+                'name': student['name'],
+                'student_id': student['student_id'],
+                'department': student['department'],
+                'semester': student['semester']
+            },
+            'aggregates': aggregates_clean,
+            'attendance': att_list,
+            'marks': marks_list
+        }
+    })
 
 
 # ==========================================

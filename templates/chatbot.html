@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}AI Bot Assistant | AI-Based Student Performance Prediction System{% endblock %}
+
+{% block extra_head %}
+<!-- Highlight.js Atom One Dark Code Theme -->
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/atom-one-dark.min.css') }}">
+<!-- Chatbot Custom Styling -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/chatbot.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+  <!-- React Chatbot Root Container -->
+  <div id="chatbot-app-root">
+    <!-- Fallback Loading State before React Hydration -->
+    <div class="custom-card p-5 text-center my-4">
+      <div class="spinner-border text-primary mb-3" role="status">
+        <span class="visually-hidden">Loading AI Assistant...</span>
+      </div>
+      <h5 class="fw-bold text-dark">Initializing EduPredict AI Copilot...</h5>
+      <p class="text-muted small">Loading conversational components and Google Gemini AI interface.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- React 18 & ReactDOM 18 Local Vendor Bundle -->
+<script src="{{ url_for('static', filename='vendor/react.production.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/react-dom.production.min.js') }}"></script>
+<!-- Babel Standalone for In-Browser JSX Compilation -->
+<script src="{{ url_for('static', filename='vendor/babel.min.js') }}"></script>
+<!-- Marked.js Markdown Parser -->
+<script src="{{ url_for('static', filename='vendor/marked.min.js') }}"></script>
+<!-- Highlight.js Code Syntax Highlighting -->
+<script src="{{ url_for('static', filename='vendor/highlight.min.js') }}"></script>
+<!-- React Chatbot Application Script -->
+<script type="text/babel" src="{{ url_for('static', filename='js/chatbot.jsx') }}"></script>
+{% endblock %}

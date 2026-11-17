@@ -19,6 +19,63 @@ def get_db_connection():
     return conn
 
 
+def compute_student_aggregates(student_id):
+    """
+    Computes cumulative statistics for a student:
+    - total attended classes, total conducted, overall attendance %
+    - average internal assessment score (scaled to 100)
+    - latest prediction record
+    - performance category
+    """
+    conn = get_db_connection()
+    att_rows = conn.execute("SELECT * FROM attendance WHERE student_id = ?", (student_id,)).fetchall()
+    mark_rows = conn.execute("SELECT * FROM internal_marks WHERE student_id = ?", (student_id,)).fetchall()
+    latest_pred = conn.execute(
+        "SELECT * FROM predictions WHERE student_id = ? ORDER BY created_at DESC LIMIT 1",
+        (student_id,)
+    ).fetchone()
+    conn.close()
+
+    total_att = sum(r['attended_classes'] for r in att_rows) if att_rows else 0
+    total_cls = sum(r['total_classes'] for r in att_rows) if att_rows else 0
+    overall_att_pct = round((total_att / total_cls * 100), 1) if total_cls > 0 else 0.0
+
+    avg_internal = 0.0
+    if mark_rows:
+        total_scaled = sum(
+            ((r['ia1'] + r['ia2'] + r['assignment_marks']) / 75.0 * 100) for r in mark_rows
+        )
+        avg_internal = round(total_scaled / len(mark_rows), 1)
+
+    predicted_marks = latest_pred['predicted_marks'] if latest_pred else None
+    category = latest_pred['category'] if latest_pred else None
+
+    # Derive fallback category if no prediction yet
+    if not category:
+        if avg_internal >= 85:
+            category = "Excellent"
+        elif avg_internal >= 70:
+            category = "Good"
+        elif avg_internal >= 50:
+            category = "Average"
+        elif avg_internal > 0:
+            category = "Needs Improvement"
+        else:
+            category = "Not Evaluated"
+
+    return {
+        'total_attended': total_att,
+        'total_classes': total_cls,
+        'overall_attendance_pct': overall_att_pct,
+        'avg_internal': avg_internal,
+        'predicted_marks': predicted_marks,
+        'category': category,
+        'latest_prediction': latest_pred,
+        'attendance_count': len(att_rows),
+        'marks_count': len(mark_rows)
+    }
+
+
 def init_db():
     """Initializes SQLite database tables if they do not exist."""
     conn = get_db_connection()
@@ -91,6 +148,31 @@ def init_db():
     if 'subject_name' not in columns:
         cursor.execute("ALTER TABLE predictions ADD COLUMN subject_name TEXT DEFAULT 'Overall Examination'")
         print("Migrated predictions table: added subject_name column.")
+
+    # 5. Chat Conversations Table (Persistent storage for AI Bot Assistant)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS chat_conversations (
+        id TEXT PRIMARY KEY,
+        student_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+    )
+    """)
+
+    # 6. Chat Messages Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS chat_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        conversation_id TEXT NOT NULL,
+        role TEXT NOT NULL,
+        content TEXT NOT NULL,
+        metadata TEXT DEFAULT '{}',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id) ON DELETE CASCADE
+    )
+    """)
 
     conn.commit()
     conn.close()
