@@ -74,7 +74,13 @@ def init_storage(force_recheck: bool = False):
     # Ensure SQLite tables exist regardless (as safety net)
     _init_sqlite_tables()
 
-    mongo_uri = os.environ.get("MONGO_URI", "mongodb://localhost:27017/student_ai_chatbot")
+    mongo_uri = os.environ.get("MONGO_URI", "").strip()
+    if not mongo_uri:
+        _storage_backend = 'sqlite'
+        _mongo_error = None
+        print("[ChatStorage] Using persistent SQLite storage (no external MONGO_URI configured).")
+        return _storage_backend
+
     try:
         import pymongo
         client = pymongo.MongoClient(
@@ -105,7 +111,7 @@ def init_storage(force_recheck: bool = False):
     except Exception as e:
         _storage_backend = 'sqlite'
         _mongo_error = str(e)
-        print(f"[ChatStorage] MongoDB offline or unreachable ({e}). Using persistent SQLite storage fallback.")
+        print("[ChatStorage] MongoDB unreachable; switched cleanly to persistent SQLite storage.")
 
     return _storage_backend
 
