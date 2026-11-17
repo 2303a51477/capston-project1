@@ -30,14 +30,14 @@ from dotenv import load_dotenv
 # Re-read environment variables dynamically
 load_dotenv(override=True)
 
-# Candidate cloud models in order of preference
-CANDIDATE_MODELS = [
+# Candidate cloud models in order of preference (deduplicated)
+CANDIDATE_MODELS = list(dict.fromkeys([
     os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite"),
     "gemini-3.5-flash-lite",
     "gemini-3.5-flash",
     "gemini-3.8-flash",
     "gemini-flash-latest"
-]
+]))
 
 
 def get_api_key() -> Optional[str]:

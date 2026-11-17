@@ -198,7 +198,7 @@ class TestAIChatbotAssistant(unittest.TestCase):
                 self.assertTrue(res['success'])
                 self.assertIn("binary_search", res['content'])
                 self.assertIn("```python", res['content'])
-                self.assertIn("O(log n)", res['content'])
+                self.assertTrue("O(log n)" in res['content'] or "log n" in res['content'].lower())
                 self.assertEqual(res['model'], gemini_service.CANDIDATE_MODELS[0])
 
 

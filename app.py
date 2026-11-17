@@ -958,7 +958,7 @@ def api_chat_status():
     student = get_current_student()
     storage_info = chat_storage.get_storage_status()
     is_configured = gemini_service.is_api_configured()
-    active_model = os.environ.get('GEMINI_MODEL', 'gemini-1.5-flash') if is_configured else "EduPredict Built-in AI"
+    active_model = os.environ.get('GEMINI_MODEL', 'gemini-3.5-flash-lite') if is_configured else "EduPredict RAG Engine"
 
     return jsonify({
         'success': True,
