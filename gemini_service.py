@@ -801,9 +801,9 @@ def call_gemini_api(
         except Exception as sdk_err:
             print(f"[Gemini SDK] SDK attempt for {model_name} failed: {sdk_err}")
 
-        # If the API key is fundamentally rejected by Google (API_KEY_INVALID),
+        # If the API key or project is rejected by Google (400 API_KEY_INVALID or 403 Billing/Permission),
         # do not repeatedly make remote network requests for remaining candidate models.
-        if last_reason == "API_KEY_INVALID":
+        if last_reason == "API_KEY_INVALID" or last_status_code == 403:
             break
 
     # If all models failed, return detailed failure dict

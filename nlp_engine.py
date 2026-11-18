@@ -24,6 +24,9 @@ class IntentType:
     PROGRAMMING_DSA = "PROGRAMMING_DSA"
     COURSE_CONCEPT = "COURSE_CONCEPT"
     CAREER_GUIDANCE = "CAREER_GUIDANCE"
+    PROJECT_ARCHITECTURE = "PROJECT_ARCHITECTURE"
+    CONVERSATIONAL_GREETING = "CONVERSATIONAL_GREETING"
+    CONVERSATIONAL_CLOSING = "CONVERSATIONAL_CLOSING"
     GENERAL_KNOWLEDGE = "GENERAL_KNOWLEDGE"
 
 
@@ -118,9 +121,28 @@ class NLPEngine:
             ]
         ),
         (
+            IntentType.PROJECT_ARCHITECTURE,
+            [
+                r"\b(this project|project architecture|ml model architecture|how does this system work|how does this app work|explain this project)\b"
+            ]
+        ),
+        (
             IntentType.COURSE_CONCEPT,
             [
                 r"\b(deadlock|coffman|process scheduling|virtual memory|paging|thrashing|semaphore|mutex|acid|normalization|1nf|2nf|3nf|bcnf|indexing|b-tree|b\+ tree|osi layer|osi layers|tcp|udp|three way handshake|ip address|subnetting|routing|random forest|decision tree|overfitting|underfitting)\b"
+            ]
+        ),
+        (
+            IntentType.CONVERSATIONAL_GREETING,
+            [
+                r"^(hi+|hello+|hey+|hii+|namaste|hola|yo|sup|good morning|good afternoon|good evening|greetings)[\s!?.]*$",
+                r"\b(how are you|who are you|what is your name|what can you do|help me|introduce yourself)\b"
+            ]
+        ),
+        (
+            IntentType.CONVERSATIONAL_CLOSING,
+            [
+                r"^(thanks|thank you|thx|ty|bye|goodbye|see you|ok|okay|cool|great|nice|awesome|got it|understood)[\s!?.]*$"
             ]
         )
     ]

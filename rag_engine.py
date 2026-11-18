@@ -395,12 +395,90 @@ class RAGEngine:
         RAG chunks and NLP metadata. Never invents student data or hallucinates facts.
         """
         intent = nlp_analysis.get("primary_intent", "GENERAL_KNOWLEDGE")
-        q = query.lower()
+        q = query.lower().strip()
+
+        # -------------------------------------------------------------
+        # 0. CONVERSATIONAL GREETINGS & CLOSINGS ("HI", "HELLO", "THANKS")
+        # -------------------------------------------------------------
+        if intent == "CONVERSATIONAL_GREETING":
+            if student_profile:
+                s = student_profile['student']
+                att = student_profile['attendance']
+                preds = student_profile['predictions']
+                weak_names = ", ".join([w['course']['name'] for w in student_profile['weak_subjects']])
+                weak_line = f"- **Attention Needed:** {weak_names}" if weak_names else "- **Academic Status:** All courses currently in safe standing!"
+
+                return f"""### 👋 Hello {s['name']}! Welcome to EduPredict AI Study Copilot
+
+I'm connected directly to your verified academic profile (**{s['student_id']}**, {s['department']}, Semester {s['semester']}) and ready to help!
+
+#### 📊 Your Live Academic Snapshot:
+- **Overall Attendance:** **{att['overall_pct']}%** ({att['total_attended']}/{att['total_classes']} classes)
+- **Predicted Final Marks:** **{preds['predicted_marks']}/100** (*{preds['category']}*)
+{weak_line}
+
+---
+
+#### 💬 How Can I Help You Today?
+You can ask me anything like:
+- *"What are my weak subjects and how do I improve them?"*
+- *"How many classes do I need to attend in CCN to reach 75%?"*
+- *"Generate a personalized daily study timetable for me."*
+- *"Explain QuickSort, MergeSort, Linked Lists, or Binary Search Trees with code."*
+- *"Explain ACID properties in DBMS or Deadlocks in Operating Systems."*
+- *"What are the best career options for my subjects?"*"""
+            else:
+                return """### 👋 Hello! Welcome to EduPredict AI Study Copilot
+
+I am your AI academic mentor for the **AI-Based Student Performance Prediction System**.
+
+Ask me about:
+- **Academic Analytics:** Attendance tracking, internal marks, predicted scores, and personalized study plans.
+- **Computer Science & DSA:** QuickSort, Binary Search Trees, Linked Lists, DBMS, Operating Systems, Networks, and Machine Learning.
+- **Career Guidance:** Software Engineering, AI/ML, and Cloud/DevOps roadmaps."""
+
+        if intent == "CONVERSATIONAL_CLOSING":
+            sname = student_profile['student']['name'] if student_profile else "there"
+            return f"""### 😊 You're Welcome, {sname}!
+
+Glad I could help! Whenever you want to check your attendance recovery math, review internal scores, practice DSA coding problems, or update your study plan, just send a message. Keep up the great work! 🚀"""
+
+        # -------------------------------------------------------------
+        # 0B. PROJECT & ML MODEL ARCHITECTURE
+        # -------------------------------------------------------------
+        if intent == "PROJECT_ARCHITECTURE":
+            return """### 🏗️ AI-Based Student Performance Prediction System — Architecture
+
+This capstone application combines **Machine Learning**, **Natural Language Processing (NLP)**, **Retrieval-Augmented Generation (RAG)**, and **Generative AI** in a full-stack web portal:
+
+---
+
+#### 1. 🧠 Machine Learning Prediction Engine (`train_model.py`)
+- **Algorithm:** Scikit-learn **Random Forest Regressor** (150 Decision Trees trained on 1,500 historical student records).
+- **Validated Accuracy:** **R² = 0.880** (explains 88% of final exam score variance), **MAE = 3.05 marks**, **RMSE = 3.74 marks**.
+- **Feature Importance Weights:**
+  - Continuous Internal Marks: **63.0%** (Primary driver)
+  - Assignment Scores: **18.1%**
+  - Classroom Attendance: **8.1%**
+  - Daily Study Hours: **7.8%**
+  - Previous Semester Marks: **3.1%**
+
+#### 2. 🤖 5-Layer AI Chatbot Architecture
+1. **Conversation Memory (`conversation_memory.py`):** Tracks multi-turn context and resolves follow-up pronouns (*"fix it"*, *"that subject"*).
+2. **NLP Engine (`nlp_engine.py`):** Classifies user intents and extracts course & metric entities.
+3. **Semantic Search & RAG (`rag_engine.py`):** Uses TF-IDF + Cosine Similarity over live SQLite student records and CS curriculum materials.
+4. **LLM Integration (`gemini_service.py`):** Dispatches RAG-grounded prompts to **Google Gemini** (`gemini-3.5-flash-lite`) when configured, with honest local RAG synthesis when offline.
+5. **Dual Storage (`chat_storage.py`):** Supports MongoDB with zero-downtime SQLite persistence.
+
+#### 3. 💻 Full-Stack Technology Stack
+- **Backend:** Python Flask + Gunicorn (deployed on Render)
+- **Frontend:** React 18 (Chatbot UI), Bootstrap 5, Chart.js analytics, Marked.js + Highlight.js
+- **Reporting:** Automated downloadable PDF progress reports via ReportLab"""
 
         # -------------------------------------------------------------
         # 1. DSA / PROGRAMMING SYNTHESIS
         # -------------------------------------------------------------
-        if intent == "PROGRAMMING_DSA" or any(k in q for k in ["quicksort", "binary search", "mergesort", "linked list", "bst", "stack", "queue"]):
+        if intent == "PROGRAMMING_DSA" or any(k in q for k in ["quicksort", "binary search", "mergesort", "linked list", "bst", "binary tree", "stack", "queue"]):
             # A. QuickSort
             if "quicksort" in q or "quick sort" in q:
                 return """### ⚡ QuickSort Algorithm: Deep-Dive & Complete Code
@@ -465,8 +543,8 @@ public class QuickSort {
 - **Worst Case:** O(n²) (Occurs when pivot is smallest/largest, e.g. already sorted list with naive end-pivot)
 - **Auxiliary Space:** O(log n) call stack space."""
 
-            # B. Binary Search
-            if "binary search" in q:
+            # B. Binary Search (excluding Binary Search Tree)
+            if "binary search" in q and "tree" not in q:
                 return """### 🔍 Binary Search Algorithm: Complete Guide
 
 **Binary Search** is an optimal search algorithm designed for **sorted collections**. It cuts the search space in half with every comparison, achieving logarithmic time complexity.
@@ -611,6 +689,149 @@ class SinglyLinkedList:
 - **Insert at Head:** O(1)
 - **Insert at Tail:** O(n) (or O(1) with tail pointer)
 - **Reversal:** O(n) time, O(1) space."""
+
+            # E. Binary Search Tree (BST) in C++ and Python
+            if "bst" in q or "binary search tree" in q or "binary tree" in q:
+                return """### 🌳 Binary Search Tree (BST): C++ & Python Implementation
+
+A **Binary Search Tree (BST)** maintains the invariant: for every node, all keys in the **left subtree are smaller** and all keys in the **right subtree are larger**. An **In-Order Traversal** always visits nodes in sorted ascending order.
+
+---
+
+#### ⚙️ C++ Implementation
+```cpp
+#include <iostream>
+using namespace std;
+
+struct Node {
+    int key;
+    Node* left;
+    Node* right;
+    Node(int val) : key(val), left(nullptr), right(nullptr) {}
+};
+
+// Insert a key into the BST
+Node* insert(Node* root, int key) {
+    if (root == nullptr) return new Node(key);
+    if (key < root->key)
+        root->left = insert(root->left, key);
+    else if (key > root->key)
+        root->right = insert(root->right, key);
+    return root;
+}
+
+// Search for a key in the BST
+bool search(Node* root, int key) {
+    if (root == nullptr) return false;
+    if (root->key == key) return true;
+    return (key < root->key) ? search(root->left, key) : search(root->right, key);
+}
+
+// In-Order Traversal (prints sorted order)
+void inorder(Node* root) {
+    if (root == nullptr) return;
+    inorder(root->left);
+    cout << root->key << " ";
+    inorder(root->right);
+}
+
+int main() {
+    Node* root = nullptr;
+    int values[] = {50, 30, 70, 20, 40, 60, 80};
+    for (int v : values) root = insert(root, v);
+
+    cout << "In-Order Traversal: ";
+    inorder(root); // Output: 20 30 40 50 60 70 80
+    cout << endl << "Search 40: " << (search(root, 40) ? "Found" : "Not Found") << endl;
+    return 0;
+}
+```
+
+---
+
+#### 🐍 Python Implementation
+```python
+class Node:
+    def __init__(self, key):
+        self.key = key
+        self.left = None
+        self.right = None
+
+def insert(root, key):
+    if root is None:
+        return Node(key)
+    if key < root.key:
+        root.left = insert(root.left, key)
+    elif key > root.key:
+        root.right = insert(root.right, key)
+    return root
+
+def inorder(root):
+    if root:
+        inorder(root.left)
+        print(root.key, end=" ")
+        inorder(root.right)
+```
+
+---
+
+#### ⏱️ Complexity Analysis:
+- **Search / Insert / Delete (Average):** O(log n) for balanced trees
+- **Worst Case (Skewed Tree):** O(n) — solved using self-balancing AVL or Red-Black Trees
+- **Space Complexity:** O(h) recursion stack where h is tree height."""
+
+            # F. Stack & Queue
+            if "stack" in q or "queue" in q:
+                return """### 📚 Stack (LIFO) & Queue (FIFO) Data Structures
+
+- **Stack (Last-In, First-Out):** Elements are pushed and popped from the **top** (`O(1)`). Used in recursion call stacks, undo features, and DFS.
+- **Queue (First-In, First-Out):** Elements enter at the **rear** (`enqueue`) and leave from the **front** (`dequeue`) (`O(1)`). Used in CPU scheduling and BFS.
+
+---
+
+#### 🐍 Python Implementation
+```python
+from collections import deque
+
+# Stack using Python list
+stack = []
+stack.append(10)   # push -> O(1)
+stack.append(20)
+top = stack.pop()  # pop  -> 20, O(1)
+
+# Queue using collections.deque
+queue = deque()
+queue.append("Job1")      # enqueue -> O(1)
+queue.append("Job2")
+first = queue.popleft()   # dequeue -> "Job1", O(1)
+```"""
+
+        # -------------------------------------------------------------
+        # 1B. CAREER GUIDANCE & ROADMAPS
+        # -------------------------------------------------------------
+        if intent == "CAREER_GUIDANCE":
+            sname = student_profile['student']['name'] if student_profile else "Student"
+            dept = student_profile['student']['department'] if student_profile else "Computer Science & Engineering"
+            return f"""### 🚀 Personalized Career Pathways for {sname} ({dept})
+
+Based on your core coursework, here are the highest-growth engineering tracks and how your subjects map directly to them:
+
+1. **🤖 AI / Machine Learning Engineer**
+   - *Key Subjects:* Machine Learning & AI (CS605), Algorithms (CS601)
+   - *Core Skills:* Python, Scikit-learn, PyTorch/TensorFlow, RAG & LLMs, Statistics.
+2. **💻 Software Development Engineer (Full-Stack / Backend SDE)**
+   - *Key Subjects:* Design & Analysis of Algorithms (CS601), DBMS (CS603), Operating Systems (CS602)
+   - *Core Skills:* DSA (Trees, Graphs, DP), Java/Python/C++, React.js, Flask/Node.js, SQL/NoSQL.
+3. **☁️ Cloud & DevOps / Site Reliability Engineer (SRE)**
+   - *Key Subjects:* Cloud Computing & DevOps (CS699), Computer Communication Networks (CS604), OS (CS602)
+   - *Core Skills:* Linux internals, Docker, Kubernetes, AWS/GCP, CI/CD, TCP/IP Networking.
+4. **🗄️ Data & Database Engineer**
+   - *Key Subjects:* DBMS (CS603), Machine Learning (CS605)
+   - *Core Skills:* Advanced SQL, Indexing (B+ Trees), MongoDB, ETL Pipelines.
+
+#### 💡 Placement Action Steps:
+- Practice 2 DSA problems daily (Arrays, Trees, Graphs, Dynamic Programming).
+- Highlight your **AI-Based Student Performance Prediction System** capstone (Random Forest ML + Flask + React + Gemini RAG) prominently on your resume!"""
 
         # -------------------------------------------------------------
         # 2. STUDENT STUDY PLAN / TIMETABLE
